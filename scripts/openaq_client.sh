@@ -8,8 +8,16 @@ OPENAQ_API_BASE="${OPENAQ_API_BASE:-https://api.openaq.org/v3}"
 AIR_CHART_CACHE_DIR="${AIR_CHART_CACHE_DIR:-$HOME/.cache/air-chart}"
 AIR_CHART_TIMEOUT="${AIR_CHART_TIMEOUT:-20}"
 AIR_CHART_MAX_RETRY="${AIR_CHART_MAX_RETRY:-4}"
+AIR_CHART_UA="${AIR_CHART_UA:-x-cmd-air-chart/0.1.0}"
+
+_OAC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PARAMS_TSV="${AIR_CHART_PARAMS_TSV:-$_OAC_DIR/../data/parameters.tsv}"
 
 air_chart_err() { printf '[air-chart] ERROR: %s\n' "$*" >&2; }
+
+# 静态参数字典查询: param_field <slug> <列号>  列: 1slug 2id 3名称 4单位 5WHO基准 6物理上限 7色 8深色色
+param_field() { awk -F'\t' -v s="$1" -v c="$2" '$1==s {print $c; exit}' "$PARAMS_TSV"; }
+param_slugs() { awk -F'\t' 'NR>1 && $1 !~ /^#/ {print $1}' "$PARAMS_TSV" | tr '\n' ' ' | sed 's/ $//'; }
 
 # ---------- 鉴权 ----------
 openaq_api_key() {
@@ -68,11 +76,12 @@ _openaq_get() { # _openaq_get <path-with-query> <ttl_seconds>
   fi
 
   local api_key; api_key="$(openaq_api_key)" || exit 3
-  local attempt=1 wait
+  local attempt=1 wait backoff=2
   local body http_code
   while (( attempt <= AIR_CHART_MAX_RETRY )); do
     body="$(curl -sS --max-time "$AIR_CHART_TIMEOUT" -w $'\n%{http_code}' \
       -H "X-API-Key: $api_key" -H 'Accept: application/json' \
+      -H "User-Agent: $AIR_CHART_UA" \
       "${OPENAQ_API_BASE}${path}" 2>/dev/null)" || body=$'curl_failed\n000'
     http_code="$(printf '%s' "$body" | tail -n1)"
     body="$(printf '%s' "$body" | sed '$d')"
@@ -82,22 +91,22 @@ _openaq_get() { # _openaq_get <path-with-query> <ttl_seconds>
         _cache_put "$key" "$body"
         printf '%s' "$body"; return 0 ;;
       429)
-        # 解析 Retry-After, 否则指数退避
-        wait=$(( attempt * 5 ))
-        sleep "$wait"
+        # 指数退避: 2s 起步倍增, 上限 30s
+        wait=$backoff; (( backoff > 30 )) && wait=30
+        sleep "$wait"; backoff=$(( backoff * 2 ))
         (( attempt++ )) ;;
       401|403)
-        air_chart_err "API 鉴权失败 (HTTP $http_code), 请检查 OPENAQ_API_KEY 是否有效。"
+        air_chart_err "AUTH_ERROR: OPENAQ_API_KEY 无效或未配置 (HTTP $http_code)。"
         exit 4 ;;
       000)
         air_chart_err "网络请求失败, 请检查网络连接。"
         exit 4 ;;
       *)
-        air_chart_err "OpenAQ API 异常 (HTTP $http_code): $(printf '%s' "$body" | head -c 200)"
+        air_chart_err "API_ERROR: OpenAQ 请求失败 (HTTP $http_code): $(printf '%s' "$body" | head -c 200)"
         exit 4 ;;
     esac
   done
-  air_chart_err "触发限流 (429), 已按 Retry-After 退避 $AIR_CHART_MAX_RETRY 次仍失败, 请稍后重试。"
+  air_chart_err "RATE_LIMIT: OpenAQ API 请求频率超限, 已退避重试 $AIR_CHART_MAX_RETRY 次, 请稍后重试。"
   exit 4
 }
 
@@ -108,33 +117,34 @@ openaq_find_locations() { # <lat> <lon> [radius_m] -> locations JSON
 }
 
 # 从 locations JSON 中优选传感器; 输出: sensor_id \t units \t timezone \t location_name \t isMonitor
-openaq_pick_sensor() { # <locations_json> <param>
-  local json="$1" param="$2"
-  printf '%s' "$json" | jq -r --arg p "$param" '
-    [ .results[]? | . as $loc
-      | (.sensors // [])[] | select((.parameter.name // "" | ascii_downcase) == $p
+# 优先按参数固定 ID 匹配 (对齐 openaq-api 字典), 名称匹配兜底
+_sensor_jq_filter='. as $loc
+      | (.sensors // [])[] | select((.parameter.id // 0) == ($pid | tonumber)
+          or (.parameter.name // "" | ascii_downcase) == $p
           or (.parameter.displayName // "" | ascii_downcase | gsub("[._]";"")) == ($p | gsub("[._]";"")))
       | { sensor_id: .id, units: (.parameter.units // ""),
           tz: ($loc.timezone // "UTC"), name: ($loc.name // $loc.locality // "unknown"),
-          monitor: ($loc.isMonitor // false), last: ($loc.datetimeLast.utc // "") } ]
-    | map(select(.last != ""))
+          monitor: ($loc.isMonitor // false), last: ($loc.datetimeLast.utc // "") }'
+
+openaq_pick_sensor() { # <locations_json> <param>
+  local json="$1" param="$2" pid
+  pid="$(param_field "$param" 2)"
+  printf '%s' "$json" | jq -r --arg p "$param" --arg pid "${pid:-0}" "
+    [ .results[]? | $_sensor_jq_filter ]
+    | map(select(.last != \"\"))
     | sort_by(.monitor | not)          # 参考级监测站优先
     | .[0] // empty
-    | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv'
+    | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv"
 }
 
 openaq_pick_all_sensors() { # <locations_json> <param> — 快照模式: 输出全部活性站点的 sensor 行
-  local json="$1" param="$2"
-  printf '%s' "$json" | jq -r --arg p "$param" '
-    [ .results[]? | . as $loc
-      | (.sensors // [])[] | select((.parameter.name // "" | ascii_downcase) == $p
-          or (.parameter.displayName // "" | ascii_downcase | gsub("[._]";"")) == ($p | gsub("[._]";"")))
-      | { sensor_id: .id, units: (.parameter.units // ""),
-          tz: ($loc.timezone // "UTC"), name: ($loc.name // $loc.locality // "unknown"),
-          monitor: ($loc.isMonitor // false), last: ($loc.datetimeLast.utc // "") } ]
-    | map(select(.last != ""))
+  local json="$1" param="$2" pid
+  pid="$(param_field "$param" 2)"
+  printf '%s' "$json" | jq -r --arg p "$param" --arg pid "${pid:-0}" "
+    [ .results[]? | $_sensor_jq_filter ]
+    | map(select(.last != \"\"))
     | sort_by(.monitor | not)
-    | .[] | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv'
+    | .[] | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv"
 }
 
 # ---------- 活性过滤 ----------

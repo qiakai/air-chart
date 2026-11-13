@@ -16,10 +16,14 @@ source "$SCRIPT_DIR/openaq_client.sh"
 
 # ---------- 参数默认值 ----------
 CITIES=(); PARAMS=("pm25"); PERIOD="7d"; SNAPSHOT=0; THEME="light"; OUT=""; DEMO=0
-declare -A WHO_BASELINE=( [pm25]=15 [pm10]=45 [o3]=100 [no2]=25 [so2]=40 [co]=4 )
-declare -A PARAM_LABEL=( [pm25]="PM2.5" [pm10]="PM10" [o3]="O3" [no2]="NO2" [so2]="SO2" [co]="CO" )
-declare -A PARAM_UNITS=( [pm25]="µg/m³" [pm10]="µg/m³" [o3]="µg/m³" [no2]="µg/m³" [so2]="µg/m³" [co]="mg/m³" )
-VALID_PARAMS="pm25 pm10 o3 no2 so2 co"
+VALID_PARAMS="$(param_slugs)"
+# 从 data/parameters.tsv 静态字典加载指标元数据 (列: 3名称 4单位 5WHO基准 6上限 7色 8深色色)
+declare -A WHO_BASELINE PARAM_LABEL PARAM_UNITS PARAM_CAP PARAM_COLOR PARAM_COLOR_DARK
+while IFS=$'\t' read -r slug pid pname punits pwho pcap pcolor pcolord; do
+  [[ "$slug" == \#* || -z "$slug" ]] && continue
+  WHO_BASELINE[$slug]="$pwho"; PARAM_LABEL[$slug]="$pname"; PARAM_UNITS[$slug]="$punits"
+  PARAM_CAP[$slug]="$pcap"; PARAM_COLOR[$slug]="$pcolor"; PARAM_COLOR_DARK[$slug]="$pcolord"
+done < "$PARAMS_TSV"
 
 usage() { sed -n '2,14p' "${BASH_SOURCE[0]}"; }
 
@@ -87,8 +91,8 @@ demo_series() { # <city> <param> <gran> <n> -> 生成 label\tvalue 到 stdout
 }
 
 # ---------- 主流程 ----------
-declare -a RENDER_SPECS=(); declare -a CITY_NOTES=()
-FIRST_UNITS=""; FIRST_TZ=""
+declare -a RENDER_SPECS=() CITY_NOTES=() SERIES_PARAMS=() SERIES_UNITS=()
+FIRST_UNITS=""; FIRST_TZ=""; GLOBAL_MAX=""
 
 fetch_city_series() { # <city> -> 为每个 param 生成 series 文件, 输出到 RENDER_SPECS
   local city="$1"
@@ -127,18 +131,20 @@ fetch_city_series() { # <city> -> 为每个 param 生成 series 文件, 输出�
     local raw clean
     raw="$(openaq_fetch_series "$sensor_id" "$GRAN" "$DATE_FROM" "$DATE_TO")"
     clean="$WORK/${geo_name}.${param}.tsv"
-    awk -v gran="$GRAN" -v stats="$WORK/${geo_name}.${param}.stats" \
+    awk -v gran="$GRAN" -v cap="${PARAM_CAP[$param]}" -v stats="$WORK/${geo_name}.${param}.stats" \
         -f "$SCRIPT_DIR/data_transform.awk" <<<"$raw" > "$clean"
     if [[ ! -s "$clean" ]]; then
       printf '[air-chart] WARN: %s %s 在时间范围内无有效数据点。\n' "$city" "${PARAM_LABEL[$param]}" >&2
       continue
     fi
     RENDER_SPECS+=("${geo_name} ${PARAM_LABEL[$param]}:${clean}")
+    SERIES_PARAMS+=("$param"); SERIES_UNITS+=("$units")
     local st_min st_max st_avg st_cnt
     st_cnt="$(awk -F'\t' '$1=="count"{print $2}' "$WORK/${geo_name}.${param}.stats")"
     st_min="$(awk -F'\t' '$1=="min"{print $2}' "$WORK/${geo_name}.${param}.stats")"
     st_max="$(awk -F'\t' '$1=="max"{print $2}' "$WORK/${geo_name}.${param}.stats")"
     st_avg="$(awk -F'\t' '$1=="avg"{print $2}' "$WORK/${geo_name}.${param}.stats")"
+    if [[ -n "$st_max" && ( -z "$GLOBAL_MAX" || "$(awk -v a="$GLOBAL_MAX" -v b="$st_max" 'BEGIN{print (b>a)?1:0}')" == "1" ) ]]; then GLOBAL_MAX="$st_max"; fi
     CITY_NOTES+=("  - ${geo_name} · ${PARAM_LABEL[$param]} · 站点: ${sname}$( [[ "$monitor" == "true" ]] && echo ' (参考级)') · n=${st_cnt} min=${st_min} max=${st_max} avg=$(printf '%.1f' "$st_avg") ${units}")
   done
 }
@@ -175,12 +181,22 @@ fetch_city_snapshot() { # <city> <param> -> 渲染柱状图所需 items
   [[ -z "$units" || "$units" == "null" ]] && units="${PARAM_UNITS[$param]}"
   FIRST_UNITS="$units"
   local who="${WHO_BASELINE[$param]}"
+  # WHO 线仅在与字典默认单位一致时叠加, 防止量纲误导; 达标绿/超标红
+  local who_args=()
+  if [[ "$units" == "${PARAM_UNITS[$param]}" ]]; then
+    local snap_max whoc
+    snap_max="$(printf '%s\n' "${items[@]#*:}" | sort -g | tail -1)"
+    whoc="#EF4444"
+    [[ "$(awk -v a="${snap_max:-0}" -v b="$who" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && whoc="#10B981"
+    who_args=(--who "$who" --who-label "WHO 24h: $who ${PARAM_UNITS[$param]}" --who-color "$whoc")
+  fi
+  local snap_color="${PARAM_COLOR[$param]}"; [[ "$THEME" == "dark" ]] && snap_color="${PARAM_COLOR_DARK[$param]}"
   "$SCRIPT_DIR/render_draw.sh" bar \
     --title "$geo_name 各监测点 ${PARAM_LABEL[$param]} 实时快照" \
     --subtitle "数据来源 OpenAQ · $(TZ="$tz" date '+%Y-%m-%d %H:%M %Z') · 25km 半径内活性站点" \
     --ylabel "$units" \
-    --items "${items[@]}" \
-    ${who:+--who "$who" --who-label "WHO 基准"} \
+    --items "${items[@]}" --colors "$snap_color" \
+    ${who_args[@]+"${who_args[@]}"} \
     --theme "$THEME" --width 960 --height $((120 + 60 * ${#items[@]})) \
     --out "$OUT"
 }
@@ -191,17 +207,23 @@ if (( ! DEMO )); then
 fi
 
 if (( SNAPSHOT )); then
+  snap_param="${PARAMS[0]}"
+  snap_color="${PARAM_COLOR[$snap_param]}"; [[ "$THEME" == "dark" ]] && snap_color="${PARAM_COLOR_DARK[$snap_param]}"
+  snap_units="${PARAM_UNITS[$snap_param]}"
+  snap_who="${WHO_BASELINE[$snap_param]}"
   if (( DEMO )); then
     # 演示快照
     demo_city="${CITIES[0]}"
     items=("朝阳公园:32.4" "奥体中心:45.1" "万寿西宫:51.8" "通州:58.2" "昌平:26.9" "大兴:63.5")
     FIRST_UNITS="µg/m³"
     CITY_NOTES=("  - 演示数据模式, 未请求真实 API")
+    snap_max=63.5
+    [[ "$(awk -v a="$snap_max" -v b="$snap_who" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && snap_whoc="#10B981" || snap_whoc="#EF4444"
     "$SCRIPT_DIR/render_draw.sh" bar \
-      --title "$demo_city 各监测点 PM2.5 实时快照 (演示)" \
+      --title "$demo_city 各监测点 ${PARAM_LABEL[$snap_param]} 实时快照 (演示)" \
       --subtitle "数据来源 OpenAQ · 演示模式 · 25km 半径内活性站点" \
-      --ylabel "µg/m³" --items "${items[@]}" \
-      --who 15 --who-label "WHO 基准" --theme "$THEME" \
+      --ylabel "$snap_units" --items "${items[@]}" --colors "$snap_color" \
+      --who "$snap_who" --who-label "WHO 24h: $snap_who $snap_units" --who-color "$snap_whoc" --theme "$THEME" \
       --width 960 --height 480 --out "$OUT"
   else
     fetch_city_snapshot "${CITIES[0]}" "${PARAMS[0]}"
@@ -220,6 +242,9 @@ for city in "${CITIES[@]}"; do
       demo_series "$city" "$param" "$GRAN" "$((HOURS / ($( [[ "$GRAN" == hours ]] && echo 1 || echo 24 ))))" > "$clean"
       FIRST_UNITS="${PARAM_UNITS[$param]}"; FIRST_TZ="$(cut -f5 <<<"$GEO_LINE")"
       RENDER_SPECS+=("${geo_name} ${PARAM_LABEL[$param]}:${clean}")
+      SERIES_PARAMS+=("$param"); SERIES_UNITS+=("${PARAM_UNITS[$param]}")
+      dmax="$(awk -F'\t' '$2!=""{if($2>m)m=$2}END{print m+0}' "$clean")"
+      if [[ -z "$GLOBAL_MAX" || "$(awk -v a="$GLOBAL_MAX" -v b="$dmax" 'BEGIN{print (b>a)?1:0}')" == "1" ]]; then GLOBAL_MAX="$dmax"; fi
     done
     CITY_NOTES+=("  - ${geo_name}: 演示数据模式 (未请求真实 API)")
   else
@@ -233,7 +258,6 @@ if (( ${#RENDER_SPECS[@]} == 0 )); then
 fi
 
 param0="${PARAMS[0]}"
-who="${WHO_BASELINE[$param0]:-}"
 city_count=${#CITIES[@]}
 # 仅拼接用户请求的指标名
 param_labels=""
@@ -253,11 +277,39 @@ else
   fi
 fi
 
+# WHO 基准线: 仅当所有序列单位与字典默认单位一致时叠加 (防止 ppm vs µg/m³ 量纲误导)
+who_args=()
+if [[ -n "${WHO_BASELINE[$param0]:-}" ]]; then
+  units_match=1
+  for i in "${!SERIES_PARAMS[@]}"; do
+    [[ "${SERIES_UNITS[$i]}" == "${PARAM_UNITS[${SERIES_PARAMS[$i]}]}" ]] || units_match=0
+  done
+  if (( units_match )); then
+    whoc="#EF4444"
+    [[ -n "$GLOBAL_MAX" && "$(awk -v a="$GLOBAL_MAX" -v b="${WHO_BASELINE[$param0]}" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && whoc="#10B981"
+    who_args=(--who "${WHO_BASELINE[$param0]}" --who-label "WHO 24h: ${WHO_BASELINE[$param0]} ${PARAM_UNITS[$param0]}" --who-color "$whoc")
+  else
+    printf '[air-chart] NOTE: 站点传感器单位与默认单位不一致, 已跳过 WHO 基准线以避免量纲误导。\n' >&2
+  fi
+fi
+
+# 序列配色: 单城用指标专属色板 (对齐 openaq-explorer), 多城用城市对比色板 (默认)
+colors_opt=()
+if (( city_count == 1 )); then
+  colors_csv=""
+  for p in "${SERIES_PARAMS[@]}"; do
+    c="${PARAM_COLOR[$p]}"; [[ "$THEME" == "dark" ]] && c="${PARAM_COLOR_DARK[$p]}"
+    colors_csv+="${colors_csv:+,}$c"
+  done
+  colors_opt=(--colors "$colors_csv")
+fi
+
 "$SCRIPT_DIR/render_draw.sh" line \
   --title "$title" --subtitle "$subtitle" \
   --ylabel "$ylabel" \
   --series "${RENDER_SPECS[@]}" \
-  ${who:+--who "$who" --who-label "WHO 24h 基准"} \
+  ${colors_opt[@]+"${colors_opt[@]}"} \
+  ${who_args[@]+"${who_args[@]}"} \
   --theme "$THEME" --out "$OUT"
 
 printf '\n[air-chart] 图表已生成: %s\n' "$OUT"

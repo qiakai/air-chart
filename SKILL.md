@@ -61,7 +61,7 @@ Agent 应：
 
 1. 向用户展示 SVG 文件路径（Markdown 中可内联引用该 SVG）。
 2. 摘要数据以文本形式呈现，注明单位为**物理浓度**（µg/m³ 等），而非 AQI 指数。
-3. 图表默认叠加 WHO 24 小时基准虚线（PM2.5=15、PM10=45、O3=100、NO2=25、SO2=40 µg/m³，CO=4 mg/m³），可据此说明达标/超标情况。
+3. 图表默认叠加 WHO 24 小时基准虚线（阈值见 `data/parameters.tsv`：PM2.5=15、PM10=45、O3=100、NO2=25、SO2=40 µg/m³，CO=4 mg/m³），达标显示绿色、超标显示红色，可据此说明达标/超标情况；若站点传感器单位与默认单位不一致（如 ppm），基准线自动隐藏以防止量纲误导。
 
 ## 异常与降级处理
 
@@ -79,6 +79,13 @@ Agent 应：
 ## 实现要点（供维护者）
 
 - `scripts/geo_resolve.sh`：城市→坐标/时区（`data/top_cities.tsv`），坐标直传兜底。
-- `scripts/openaq_client.sh`：API v3 封装（X-API-Key 鉴权、md5 缓存、429 指数退避重试、活性过滤、参考级站点优先）。
-- `scripts/data_transform.awk`：负值/空值清洗、断点检测（缺口插入空行，折线断开而非插值）、min/max/avg 统计。
+- `scripts/openaq_client.sh`：API v3 封装（X-API-Key 鉴权、User-Agent 标识、md5 缓存、429 指数退避、活性过滤、按参数固定 ID 匹配传感器、参考级站点优先）。
+- `data/parameters.tsv`：静态参数字典（slug / 固定 ID / 名称 / 单位 / WHO 24h 基准 / 物理上限 / 指标专属色），消除冗余 `/parameters` 探测。
+- `scripts/data_transform.awk`：负值/超物理上限尖峰剔除、断点检测（缺口插入空行，折线断开而非插值、严禁填 0）、min/max/avg 统计。
 - `scripts/render_draw.sh`：纯 awk SVG 渲染（折线/柱状、WHO 虚线、图例、浅深主题）。
+
+## 视觉规范（对齐 openaq-explorer）
+
+- 指标专属色板：PM2.5 `#E65100`、PM10 `#6A1B9A`、O3 `#0277BD`、NO2 `#00838F`（深色主题为对应浅色变体）。
+- 多城对比色盲友好色板：`#2563EB` / `#DC2626` / `#059669` / `#D97706`。
+- WHO 基准线：`dasharray="4,4"`，全部数据达标为安全绿 `#10B981`，存在超标为警戒红 `#EF4444`，右侧标签含数值与单位（如 `WHO 24h: 15 µg/m³`）。

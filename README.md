@@ -90,15 +90,19 @@ git clone https://github.com/qiakai/air-chart.git ~/.claude/skills/air-chart
 geo_resolve.sh      城市名 → 坐标+时区（内置坐标库 / 坐标直传）
    │
    ▼
-openaq_client.sh    OpenAQ API v3：鉴权、md5 缓存、429 退避、
-                    活性过滤(24h/72h)、参考级站点优选
+openaq_client.sh    OpenAQ API v3：鉴权、User-Agent 标识、md5 缓存、
+                    429 指数退避、活性过滤(24h/72h)、按参数固定 ID
+                    匹配传感器、参考级站点优选
    │
    ▼
-data_transform.awk  清洗(负值/空值)、断点检测、统计聚合、当地时区标签
+data_transform.awk  清洗(负值/超物理上限尖峰)、断点检测(缺失时段
+                    断开, 严禁填 0)、统计聚合、当地时区标签
    │
    ▼
 render_draw.sh      纯 awk SVG 渲染（折线/柱状 + WHO 基准虚线 + 图例）
 ```
+
+`data/parameters.tsv` 为静态参数字典（对齐 openaq-api 污染物固定 ID）：slug / param_id / 名称 / 单位 / WHO 24h 基准 / 物理上限 / 指标专属色，消除冗余 `/parameters` 探测。视觉规范对齐 openaq-explorer：指标专属色板（PM2.5 `#E65100`、PM10 `#6A1B9A`、O3 `#0277BD`、NO2 `#00838F`）、多城色盲友好色板、WHO 基准线达标绿 `#10B981` / 超标红 `#EF4444`；站点单位与默认单位不一致时自动隐藏 WHO 线以防量纲误导。
 
 ## 退出码
 

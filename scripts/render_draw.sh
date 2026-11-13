@@ -21,6 +21,8 @@ while (( $# )); do
     --series|--items) shift; while (( $# )) && [[ "$1" != --* ]]; do SPECS+=("$1"); shift; done ;;
     --who) WHO="$2"; shift 2 ;;
     --who-label) WHO_LABEL="$2"; shift 2 ;;
+    --who-color) WHO_C_OVERRIDE="$2"; shift 2 ;;
+    --colors) COLORS_OPT="$2"; shift 2 ;;
     --theme) THEME="$2"; shift 2 ;;
     --width) WIDTH="$2"; shift 2 ;;
     --height) HEIGHT="$2"; shift 2 ;;
@@ -30,15 +32,20 @@ while (( $# )); do
 done
 [[ -n "$MODE" && -n "$OUT" && ${#SPECS[@]} -gt 0 ]] || { printf 'render_draw: 用法错误, 缺少 mode/series/out\n' >&2; exit 1; }
 
-# 主题配色
+# 主题配色 (多城对比色板对齐 openaq-explorer 色盲友好色系)
 if [[ "$THEME" == "dark" ]]; then
   BG="#111827"; FG="#e5e7eb"; GRID="#374151"; AXIS="#9ca3af"
   S_COLORS=("#60a5fa" "#f87171" "#34d399" "#fbbf24" "#c084fc")
-  WHO_C="#f87171"
+  WHO_C_DEFAULT="#EF4444"
 else
-  BG="#ffffff"; FG="#111827"; GRID="#e5e7eb"; AXIS="#6b7280"
-  S_COLORS=("#2563eb" "#dc2626" "#059669" "#d97706" "#7c3aed")
-  WHO_C="#dc2626"
+  BG="#ffffff"; FG="#111827"; GRID="#e5e5e5"; AXIS="#6b7280"
+  S_COLORS=("#2563EB" "#DC2626" "#059669" "#D97706" "#7c3aed")
+  WHO_C_DEFAULT="#EF4444"
+fi
+WHO_C="${WHO_C_OVERRIDE:-$WHO_C_DEFAULT}"
+# --colors "c1,c2,..." 显式覆盖序列配色 (如指标专属色板)
+if [[ -n "${COLORS_OPT:-}" ]]; then
+  IFS=',' read -ra S_COLORS <<< "$COLORS_OPT"
 fi
 
 # 把 specs 拆成平行数组传给 awk (名称可能含空格, 用 \x1f 作分隔符)
@@ -130,8 +137,8 @@ if [[ "$MODE" == "line" ]]; then
     # WHO 基准虚线
     if (who != "") {
       y = mt + ph - ph * (who + 0) / ymax
-      printf "<line x1=\"%d\" y1=\"%.1f\" x2=\"%d\" y2=\"%.1f\" stroke=\"%s\" stroke-width=\"1.5\" stroke-dasharray=\"6 4\"/>\n", ml, y, ml + pw, y, whoc >> outfile
-      printf "<text x=\"%d\" y=\"%.1f\" font-size=\"11\" fill=\"%s\" text-anchor=\"end\" font-weight=\"600\">%s %s</text>\n", ml + pw - 6, y - 6, whoc, esc(wholabel), fmt(who + 0) >> outfile
+      printf "<line x1=\"%d\" y1=\"%.1f\" x2=\"%d\" y2=\"%.1f\" stroke=\"%s\" stroke-width=\"1.5\" stroke-dasharray=\"4,4\"/>\n", ml, y, ml + pw, y, whoc >> outfile
+      printf "<text x=\"%d\" y=\"%.1f\" font-size=\"11\" fill=\"%s\" text-anchor=\"end\" font-weight=\"600\">%s</text>\n", ml + pw - 6, y - 6, whoc, esc(wholabel) >> outfile
     }
     # 数据折线 (空值为断点)
     for (i = 1; i <= ns; i++) {
@@ -205,7 +212,7 @@ else
       y = mt + (i - 1) * bh + (bh - barh) / 2
       v = value[i] + 0
       w = plotw * v / ymax
-      c = color[((i - 1) % ncolor) + 1]
+      c = (ncolor == 1) ? color[1] : color[((i - 1) % ncolor) + 1]
       printf "<text x=\"%d\" y=\"%.1f\" font-size=\"12\" fill=\"%s\" text-anchor=\"end\">%s</text>\n", ml + labelw - 8, y + barh / 2 + 4, fg, esc(name[i]) >> outfile
       printf "<rect x=\"%d\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" rx=\"3\" fill=\"%s\"/>\n", ml + labelw, y, (w > 1 ? w : 1), barh, c >> outfile
       printf "<text x=\"%.1f\" y=\"%.1f\" font-size=\"12\" font-weight=\"600\" fill=\"%s\">%s</text>\n", ml + labelw + w + 8, y + barh / 2 + 4, fg, fmt(v) >> outfile
@@ -213,8 +220,8 @@ else
     # WHO 基准竖线
     if (who != "") {
       x = ml + labelw + plotw * (who + 0) / ymax
-      printf "<line x1=\"%.1f\" y1=\"%d\" x2=\"%.1f\" y2=\"%d\" stroke=\"%s\" stroke-width=\"1.5\" stroke-dasharray=\"6 4\"/>\n", x, mt - 8, x, mt + ph, whoc >> outfile
-      printf "<text x=\"%.1f\" y=\"%d\" font-size=\"11\" fill=\"%s\" text-anchor=\"middle\" font-weight=\"600\">%s %s</text>\n", x, mt + ph + 18, whoc, esc(wholabel), fmt(who + 0) >> outfile
+      printf "<line x1=\"%.1f\" y1=\"%d\" x2=\"%.1f\" y2=\"%d\" stroke=\"%s\" stroke-width=\"1.5\" stroke-dasharray=\"4,4\"/>\n", x, mt - 8, x, mt + ph, whoc >> outfile
+      printf "<text x=\"%.1f\" y=\"%d\" font-size=\"11\" fill=\"%s\" text-anchor=\"middle\" font-weight=\"600\">%s</text>\n", x, mt + ph + 18, whoc, esc(wholabel) >> outfile
     }
     printf "</svg>\n" >> outfile
   }'

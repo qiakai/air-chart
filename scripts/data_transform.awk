@@ -22,6 +22,7 @@ function epoch(s,   y, mo, d, h, mi, se, a, y2, m2, era, doe, doy, doe_days) {
   utc = trim($1); local = trim($2); v = trim($3)
   if (utc == "") next
   if (v == "" || v !~ /^-?[0-9]+(\.[0-9]+)?$/ || v + 0 < 0) { skipped++; next }
+  if (cap != "" && v + 0 > cap + 0) { skipped_extreme++; next }   # 超物理上限尖峰(故障)剔除
   # 标签: 小时级 "MM-DD HH:00", 日级 "MM-DD"
   label = local
   if (gran == "hours") {
@@ -53,5 +54,6 @@ END {
     printf "max\t%s\n", (n ? vmax : "") >> stats
     printf "avg\t%s\n", (n ? sum / n : "") >> stats
     printf "skipped\t%d\n", skipped >> stats
+    printf "skipped_extreme\t%d\n", skipped_extreme + 0 >> stats
   }
 }
