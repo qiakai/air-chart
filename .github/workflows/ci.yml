@@ -35,6 +35,9 @@ jobs:
 
       - name: Error-path checks
         run: |
-          env -u OPENAQ_API_KEY ./scripts/air_chart.sh --city Beijing >/dev/null 2>&1; test $? -eq 3
-          ./scripts/air_chart.sh --city Atlantis --demo >/dev/null 2>&1; test $? -eq 2
-          ./scripts/air_chart.sh --city Beijing --param bogus --demo >/dev/null 2>&1; test $? -eq 1
+          set +e
+          env -u OPENAQ_API_KEY ./scripts/air_chart.sh --city Beijing >/dev/null 2>&1; rc=$?
+          ./scripts/air_chart.sh --city Atlantis --demo >/dev/null 2>&1; rc2=$?
+          ./scripts/air_chart.sh --city Beijing --param bogus --demo >/dev/null 2>&1; rc3=$?
+          set -e
+          test "$rc" -eq 3 && test "$rc2" -eq 2 && test "$rc3" -eq 1
