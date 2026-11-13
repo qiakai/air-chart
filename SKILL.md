@@ -49,12 +49,16 @@ scripts/air_chart.sh --city <city> [--city <city2> ...] [--param <pollutant>] [-
 
 ## Prerequisites
 
-An OpenAQ API key (free): `https://explore.openaq.org/register`
+An OpenAQ API key (free, ~1 minute):
+
+1. Register or log in: `https://explore.openaq.org/register` (existing account: `https://explore.openaq.org/login`)
+2. Open your account page `https://explore.openaq.org/account` — your API key is shown near the bottom; copy it.
+3. Configure it (either one):
 
 - Ephemeral/CI: `export OPENAQ_API_KEY="..."`
 - Persistent: `echo 'OPENAQ_API_KEY=...' > ~/.config/air-chart/config` (`~/.air-chart.env` also recognized)
 
-Without a key the script exits with code 3 and prints setup guidance — never an unhandled error.
+Without a key the script exits with code 3 and prints this guidance — never an unhandled error. `--demo` mode needs no key.
 
 ## Output guide (for agents)
 

@@ -54,9 +54,11 @@ Behind the scenes, a fully automated pipeline: resolve the city → pick a **gen
 
 ## Quick start
 
-### 1. Get an API key (free)
+### 1. Get an API key (free, ~1 minute)
 
-Register at [OpenAQ](https://explore.openaq.org/register), then pick one:
+1. Register or log in at [OpenAQ Explorer](https://explore.openaq.org/register) (existing account: [log in](https://explore.openaq.org/login)).
+2. Open your [account page](https://explore.openaq.org/account) — your API key is shown near the bottom; copy it.
+3. Configure it — pick one:
 
 ```bash
 export OPENAQ_API_KEY="your_key"                             # ephemeral / CI

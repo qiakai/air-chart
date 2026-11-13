@@ -54,9 +54,11 @@
 
 ## 快速开始
 
-### 1. 配置 API Key（免费）
+### 1. 配置 API Key（免费，约 1 分钟）
 
-到 [OpenAQ 注册](https://explore.openaq.org/register) 获取 Key，然后任选其一：
+1. 打开 [OpenAQ Explorer 注册页](https://explore.openaq.org/register) 注册或[直接登录](https://explore.openaq.org/login)。
+2. 登录后打开[账户页](https://explore.openaq.org/account)，页面下方即可看到并复制你的 API Key。
+3. 任选其一配置：
 
 ```bash
 export OPENAQ_API_KEY="你的key"                                # 临时 / CI

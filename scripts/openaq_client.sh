@@ -46,19 +46,30 @@ openaq_require_key() {
   if ! openaq_api_key >/dev/null; then
     if [[ "$(_oac_lang)" == "zh" ]]; then
       cat >&2 <<'EOF'
-[Notice] 未检测到 OPENAQ_API_KEY。OpenAQ API v3 需要密钥才能访问。
-  1. 免费申请: https://explore.openaq.org/register
-  2. 任选其一配置:
-     export OPENAQ_API_KEY="your_key"                          # 临时/CI
-     echo 'OPENAQ_API_KEY=your_key' > ~/.config/air-chart/config # 持久
+[Notice] 未检测到 OPENAQ_API_KEY，无法请求 OpenAQ API v3。
+  首次使用请按以下步骤免费获取 Key（约 1 分钟）:
+    1. 注册/登录: https://explore.openaq.org/register
+       (已有账号直接登录: https://explore.openaq.org/login)
+    2. 登录后打开账户页: https://explore.openaq.org/account
+       页面下方即可看到并复制你的 API Key
+    3. 配置（任选其一）:
+       export OPENAQ_API_KEY="你的key"                              # 临时/CI
+       echo 'OPENAQ_API_KEY=你的key' > ~/.config/air-chart/config   # 持久
+  也可以先用 --demo 预览效果（无需 Key）。
 EOF
     else
       cat >&2 <<'EOF'
-[Notice] OPENAQ_API_KEY not found. OpenAQ API v3 requires a key.
-  1. Get one free at: https://explore.openaq.org/register
-  2. Configure via either:
-     export OPENAQ_API_KEY="your_key"                          # ephemeral/CI
-     echo 'OPENAQ_API_KEY=your_key' > ~/.config/air-chart/config # persistent
+[Notice] OPENAQ_API_KEY not found — the OpenAQ API v3 requires a key.
+  First-time setup (free, ~1 minute):
+    1. Register or log in: https://explore.openaq.org/register
+       (existing account: https://explore.openaq.org/login)
+    2. After logging in, open your account page:
+       https://explore.openaq.org/account
+       Your API key is shown near the bottom — copy it.
+    3. Configure it (either one):
+       export OPENAQ_API_KEY="your_key"                              # ephemeral/CI
+       echo 'OPENAQ_API_KEY=your_key' > ~/.config/air-chart/config   # persistent
+  Tip: use --demo to preview the charts without a key.
 EOF
     fi
     exit 3
