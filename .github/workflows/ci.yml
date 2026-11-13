@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax-check all scripts
+        run: |
+          for f in scripts/*.sh; do bash -n "$f"; done
+          awk -f scripts/data_transform.awk </dev/null >/dev/null
+
+      - name: Demo end-to-end (all chart modes)
+        run: |
+          ./scripts/air_chart.sh --city Beijing --param pm25 --period 7d --demo -o /tmp/beijing.svg
+          ./scripts/air_chart.sh --city Beijing --city Tokyo --param pm25 --period 7d --demo -o /tmp/compare.svg
+          ./scripts/air_chart.sh --city London --param o3 --period 48h --demo -o /tmp/london.svg
+          ./scripts/air_chart.sh --city Delhi --param pm10 --snapshot --demo -o /tmp/snapshot.svg
+          ./scripts/air_chart.sh --city Beijing --param pm25 --param pm10 --period 30d --demo --theme dark -o /tmp/dark.svg
+
+      - name: Validate SVG output
+        run: |
+          for f in /tmp/beijing.svg /tmp/compare.svg /tmp/london.svg /tmp/snapshot.svg /tmp/dark.svg; do
+            grep -q '<svg xmlns' "$f" && grep -q '</svg>' "$f" || { echo "invalid SVG: $f"; exit 1; }
+          done
+
+      - name: Error-path checks
+        run: |
+          env -u OPENAQ_API_KEY ./scripts/air_chart.sh --city Beijing >/dev/null 2>&1; test $? -eq 3
+          ./scripts/air_chart.sh --city Atlantis --demo >/dev/null 2>&1; test $? -eq 2
+          ./scripts/air_chart.sh --city Beijing --param bogus --demo >/dev/null 2>&1; test $? -eq 1

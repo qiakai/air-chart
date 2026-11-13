@@ -1,117 +1,140 @@
-# air-chart
+<div align="center">
 
-> 自然语言空气质量查询 → 全球监测站自动匹配 → 零依赖高清 SVG 图表
-> 数据源：[OpenAQ](https://openaq.org) API v3（100+ 国家/地区政府参考级监测数据）
+# Air-chart
 
+**Natural-language air quality queries → global monitoring-station matching → zero-dependency high-resolution SVG charts.**
+**Powered by the [OpenAQ](https://openaq.org) API v3 (reference-grade government monitoring data from 100+ countries).**
+
+English | [简体中文](README.zh.md)
+
+![Claude Code](https://img.shields.io/badge/Claude%20Code-native-blue)
+![Cursor](https://img.shields.io/badge/Cursor-native-blue)
+![Codex CLI](https://img.shields.io/badge/Codex%20CLI-compatible-blue)
+![ClawHub](https://img.shields.io/badge/ClawHub-publishable-green)
+![skills.sh](https://img.shields.io/badge/skills.sh-installable-green)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 特性
+</div>
 
-- **零重型依赖**：仅需 `bash` / `jq` / `awk` / `curl`，渲染器为纯 awk 实现的 SVG 生成器——不需要 Python、Matplotlib 或 Node.js。
-- **全球覆盖**：内置 200+ 全球主要城市坐标库，也支持直接传入 `lat,lon`。
-- **智能站点优选**：25km 半径检索 → 剔除 24h（必要时 72h）未更新的僵尸站点 → 优先选择政府参考级监测站（Reference-grade）。
-- **专业视觉**：醒目标注物理浓度单位（µg/m³），默认叠加 WHO 空气质量指南 24 小时基准虚线（PM2.5=15 / PM10=45 / O3=100 / NO2=25 / SO2=40 / CO=4），浅/深双主题。
-- **工程化**：本地缓存（小时级 20min / 日级 2h TTL）、429 限流指数退避、数据断点（缺失时段折线断开而非错误插值）、UTC→站点当地时间自动对齐。
+`air-chart` is an agent skill that turns a plain-language request — "compare PM2.5
+in Tokyo vs Seoul over the past week" — into a rendered SVG chart. It resolves the
+city, picks the best *active* monitoring station, cleans the time series, and draws
+the chart. No Python, no Matplotlib, no Node runtime: just `bash`, `jq`, `awk` and
+`curl`, with a hand-rolled awk SVG renderer.
 
-## 效果演示
+## Showcase
 
-| 多城对比（7 日 PM2.5） | 单城 48h 臭氧 |
+| Multi-city comparison (7-day PM2.5) | Single-city 48h ozone |
 | --- | --- |
 | ![beijing vs tokyo](examples/beijing_vs_tokyo.svg) | ![london o3](examples/london_48h_o3.svg) |
 
-| 同城多站点快照 | 单城多指标（深色主题） |
+| Multi-station snapshot | Multi-parameter (dark theme) |
 | --- | --- |
 | ![delhi snapshot](examples/delhi_snapshot.svg) | ![beijing dark](examples/beijing_pm25_pm10_dark.svg) |
 
-## 快速开始
+## Features
 
-### 1. 配置 API Key（免费）
+- **Zero heavy dependencies** — pure `bash` / `jq` / `awk` / `curl`; the SVG renderer is written in awk.
+- **Global coverage** — built-in coordinates for 200+ major cities worldwide, or pass `lat,lon` directly.
+- **Smart station selection** — 25 km radius search → drop "zombie" stations silent for 24h (72h fallback) → prefer government reference-grade monitors.
+- **Professional visuals** — physical concentration units (µg/m³) prominently labeled, WHO 24-hour guideline line overlaid by default (green when compliant, red when exceeded), light/dark themes.
+- **Engineered for real use** — local cache (20 min for hourly / 2 h for daily data), exponential backoff on HTTP 429, gap-aware rendering (missing slots break the line — never filled with 0), UTC → station-local-time alignment.
 
-到 [OpenAQ 注册](https://explore.openaq.org/register) 获取 Key，然后任选其一：
+## Quick start
+
+### 1. Get an API key (free)
+
+Register at [OpenAQ](https://explore.openaq.org/register), then pick one:
 
 ```bash
-export OPENAQ_API_KEY="你的key"
-# 或使用 x-cmd 钥匙串（系统级加密存储）
-x keyring set openaq
+export OPENAQ_API_KEY="your_key"                             # ephemeral / CI
+echo 'OPENAQ_API_KEY=your_key' > ~/.config/air-chart/config  # persistent
 ```
 
-> 没有 Key 也能用 `--demo` 演示模式预览完整效果。
+No system keychain required — a free, public-service credential stays in a plain
+config file. Without a key, `--demo` mode still renders everything with sample data.
 
-### 2. 运行
+### 2. Run
 
 ```bash
-# 单城市 7 天 PM2.5 趋势
+# Single city, 7-day PM2.5 trend
 ./scripts/air_chart.sh --city Beijing --param pm25 --period 7d
 
-# 多城市对比（最多 4 城）
+# Multi-city comparison (up to 4 cities)
 ./scripts/air_chart.sh --city Tokyo --city Seoul --param pm25 --period 7d
 
-# 单城市多指标（如 PM2.5 + PM10）
+# Multi-parameter single city (PM2.5 + PM10)
 ./scripts/air_chart.sh --city Beijing --param pm25 --param pm10 --period 30d
 
-# 48 小时小时级曲线（观察昼夜规律）
+# 48-hour hourly curve (day/night pattern)
 ./scripts/air_chart.sh --city Singapore --param o3 --period 48h
 
-# 同城多站点实时快照（柱状图）
+# Multi-station real-time snapshot (bar chart)
 ./scripts/air_chart.sh --city Delhi --param pm10 --snapshot
 
-# 深色主题 + 指定输出
+# Dark theme, custom output
 ./scripts/air_chart.sh --city London --param no2 --period 14d --theme dark -o london.svg
 ```
 
-### 3. 作为 AI Agent Skill 安装
-
-将本仓库（或其中 `SKILL.md` + `scripts/` + `data/`）放入你的 Agent skills 目录即可，例如：
+### 3. Install as an AI agent skill
 
 ```bash
 git clone https://github.com/qiakai/air-chart.git ~/.claude/skills/air-chart
+# or: npx skills add qiakai/air-chart
 ```
 
-之后对 Agent 说"对比东京和首尔过去 7 天的 PM2.5 走势"即可自动调用。
+Then just ask your agent: *"Compare PM2.5 in Tokyo and Seoul over the past 7 days."*
 
-## 命令参数
+## CLI reference
 
-| 参数 | 说明 | 取值 |
+| Flag | Description | Values |
 | --- | --- | --- |
-| `--city, -c` | 城市名（可重复，≤4 个）或坐标 `"lat,lon"` | `Beijing`、`New Delhi`、`39.9,116.4` |
-| `--param, -p` | 污染物指标（默认 `pm25`） | `pm25` `pm10` `o3` `no2` `so2` `co` |
-| `--period, -t` | 时间跨度（默认 `7d`） | `24h` `48h`（小时级）· `7d` `14d` `30d`（日级） |
-| `--snapshot` | 同城多站点实时快照柱状图 | 开关 |
-| `--theme` | 主题 | `light` / `dark` |
-| `--out, -o` | 输出 SVG 路径 | 默认 `./air-chart-<时间戳>.svg` |
-| `--demo` | 演示模式（免 API Key） | 开关 |
+| `--city, -c` | City name (repeatable, ≤4) or coordinates `"lat,lon"` | `Beijing`, `New Delhi`, `39.9,116.4` |
+| `--param, -p` | Pollutant (default `pm25`) | `pm25` `pm10` `o3` `no2` `so2` `co` |
+| `--period, -t` | Time range (default `7d`) | `24h` `48h` (hourly) · `7d` `14d` `30d` (daily) |
+| `--snapshot` | Multi-station real-time snapshot bar chart | flag |
+| `--theme` | Color theme | `light` / `dark` |
+| `--out, -o` | Output SVG path | default `./air-chart-<timestamp>.svg` |
+| `--demo` | Demo mode, no API key needed | flag |
 
-## 架构
+## Architecture
 
 ```text
-[城市/指标/时间跨度]
+[city / pollutant / time range]
    │
    ▼
-geo_resolve.sh      城市名 → 坐标+时区（内置坐标库 / 坐标直传）
+geo_resolve.sh      city name → coordinates + timezone (built-in gazetteer / raw lat,lon)
    │
    ▼
-openaq_client.sh    OpenAQ API v3：鉴权、User-Agent 标识、md5 缓存、
-                    429 指数退避、活性过滤(24h/72h)、按参数固定 ID
-                    匹配传感器、参考级站点优选
+openaq_client.sh    OpenAQ API v3: auth, User-Agent, md5 cache,
+                    429 exponential backoff, liveness filter (24h/72h),
+                    sensor match by fixed parameter ID, reference-grade first
    │
    ▼
-data_transform.awk  清洗(负值/超物理上限尖峰)、断点检测(缺失时段
-                    断开, 严禁填 0)、统计聚合、当地时区标签
+data_transform.awk  cleaning (negatives / physically impossible spikes),
+                    gap detection (breaks, never zero-filled), stats, local-time labels
    │
    ▼
-render_draw.sh      纯 awk SVG 渲染（折线/柱状 + WHO 基准虚线 + 图例）
+render_draw.sh      pure-awk SVG renderer (lines / bars + WHO guideline + legend)
 ```
 
-`data/parameters.tsv` 为静态参数字典（对齐 openaq-api 污染物固定 ID）：slug / param_id / 名称 / 单位 / WHO 24h 基准 / 物理上限 / 指标专属色，消除冗余 `/parameters` 探测。视觉规范对齐 openaq-explorer：指标专属色板（PM2.5 `#E65100`、PM10 `#6A1B9A`、O3 `#0277BD`、NO2 `#00838F`）、多城色盲友好色板、WHO 基准线达标绿 `#10B981` / 超标红 `#EF4444`；站点单位与默认单位不一致时自动隐藏 WHO 线以防量纲误导。
+`data/parameters.tsv` is a static parameter dictionary aligned with the openaq-api
+fixed pollutant IDs: slug / param_id / name / unit / WHO 24h guideline / physical
+cap / per-parameter color — no redundant `/parameters` round-trips. Visuals follow
+openaq-explorer conventions: per-parameter palette (PM2.5 `#E65100`, PM10 `#6A1B9A`,
+O3 `#0277BD`, NO2 `#00838F`), a colorblind-friendly multi-city palette, and a WHO
+guideline line in safety green `#10B981` / alert red `#EF4444`. If a station reports
+units that differ from the dictionary default (e.g. ppm), the Y-axis uses the actual
+units and the WHO line is suppressed to avoid dimensional confusion.
 
-## 退出码
+## Exit codes
 
-| 码 | 含义 |
+| Code | Meaning |
 | --- | --- |
-| 3 | 未配置 API Key（附注册引导） |
-| 4 | 网络 / API 异常 / 限流重试耗尽 |
-| 5 | 无活性站点或无有效数据 |
-| 2 | 城市名无法解析（附相近候选） |
+| 3 | No API key configured (prints setup guidance) |
+| 4 | Network / API error / rate-limit retries exhausted |
+| 5 | No active station or no valid data |
+| 2 | City name unresolvable (prints close candidates) |
 
 ## License
 

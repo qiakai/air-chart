@@ -49,8 +49,8 @@ scripts/air_chart.sh --city <城市> [--city <城市2> ...] [--param <指标>] [
 
 需要 OpenAQ API Key（免费）：`https://explore.openaq.org/register`
 
-- 环境变量：`export OPENAQ_API_KEY="..."`
-- 或 x-cmd 钥匙串：`x keyring set openaq`
+- 环境变量（临时/CI）：`export OPENAQ_API_KEY="..."`
+- 配置文件（持久）：`echo 'OPENAQ_API_KEY=...' > ~/.config/air-chart/config`（也识别 `~/.air-chart.env`）
 
 未配置时脚本以退出码 3 退出并输出注册引导，不会产生未捕获异常。
 

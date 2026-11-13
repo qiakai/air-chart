@@ -19,30 +19,31 @@ air_chart_err() { printf '[air-chart] ERROR: %s\n' "$*" >&2; }
 param_field() { awk -F'\t' -v s="$1" -v c="$2" '$1==s {print $c; exit}' "$PARAMS_TSV"; }
 param_slugs() { awk -F'\t' 'NR>1 && $1 !~ /^#/ {print $1}' "$PARAMS_TSV" | tr '\n' ' ' | sed 's/ $//'; }
 
-# ---------- 鉴权 ----------
+# ---------- 鉴权 (轻量化分层策略, 不依赖系统钥匙串) ----------
+# 优先级: 1) 环境变量 OPENAQ_API_KEY  2) ~/.config/air-chart/config  3) ~/.air-chart.env
 openaq_api_key() {
-  # 顺序: 环境变量 -> x keyring (service: openaq)
   if [[ -n "${OPENAQ_API_KEY:-}" ]]; then
     printf '%s' "$OPENAQ_API_KEY"; return 0
   fi
-  if command -v x >/dev/null 2>&1; then
-    local k
-    k="$(x keyring get openaq 2>/dev/null || true)"
-    if [[ -n "$k" && "$k" != *"not found"* ]]; then
-      printf '%s' "$k"; return 0
+  local f
+  for f in "${XDG_CONFIG_HOME:-$HOME/.config}/air-chart/config" "$HOME/.air-chart.env"; do
+    if [[ -f "$f" ]]; then
+      local k
+      k="$(sed -n 's/^OPENAQ_API_KEY=//p' "$f" | tail -n1 | tr -d '"'"'"' \r')"
+      if [[ -n "$k" ]]; then printf '%s' "$k"; return 0; fi
     fi
-  fi
+  done
   return 1
 }
 
 openaq_require_key() {
   if ! openaq_api_key >/dev/null; then
     cat >&2 <<'EOF'
-[air-chart] ERROR: 未检测到 OpenAQ API Key。
-  1. 免费注册: https://explore.openaq.org/register
+[Notice] 未检测到 OPENAQ_API_KEY。OpenAQ API v3 需要密钥才能访问。
+  1. 免费申请: https://explore.openaq.org/register
   2. 任选其一配置:
-     export OPENAQ_API_KEY="你的key"
-     x keyring set openaq          # 存入系统加密钥匙串
+     export OPENAQ_API_KEY="your_key"                          # 临时/CI
+     echo 'OPENAQ_API_KEY=your_key' > ~/.config/air-chart/config # 持久
 EOF
     exit 3
   fi
