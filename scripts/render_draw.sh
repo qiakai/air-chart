@@ -96,7 +96,7 @@ if [[ "$MODE" == "line" ]]; then
     # 取整 ymax 到 1/2/5*10^k 的 5 等分
     raw = ymax * 1.12 / 5
     mag = 10 ^ int(log(raw) / log(10))
-    for (m = 1; m <= 5; m++) { s = m * mag; if (raw <= s) break }
+    for (m = 1; m <= 10; m++) { s = m * mag; if (raw <= s) break }
     step = s; ymax = step * 5
     # SVG 头
     printf "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" > outfile
@@ -184,7 +184,7 @@ else
     if (who != "" && who + 0 > vmax) vmax = who + 0
     raw = vmax * 1.12 / 5
     mag = 10 ^ int(log(raw) / log(10))
-    for (m = 1; m <= 5; m++) { s = m * mag; if (raw <= s) break }
+    for (m = 1; m <= 10; m++) { s = m * mag; if (raw <= s) break }
     step = s; ymax = step * 5
     mt = 64; mb = 30; ml = 24; mr = 24
     pw = W - ml - mr; ph = H - mt - mb
