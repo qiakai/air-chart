@@ -19,6 +19,12 @@ air_chart_err() { printf '[air-chart] ERROR: %s\n' "$*" >&2; }
 param_field() { awk -F'\t' -v s="$1" -v c="$2" '$1==s {print $c; exit}' "$PARAMS_TSV"; }
 param_slugs() { awk -F'\t' 'NR>1 && $1 !~ /^#/ {print $1}' "$PARAMS_TSV" | tr '\n' ' ' | sed 's/ $//'; }
 
+# 语言: 优先取 air_chart.sh 设置的 AIR_CHART_LANG, 否则按 locale 自动检测
+_oac_lang() {
+  local l="${AIR_CHART_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}"
+  [[ "$l" == zh* ]] && printf 'zh' || printf 'en'
+}
+
 # ---------- 鉴权 (轻量化分层策略, 不依赖系统钥匙串) ----------
 # 优先级: 1) 环境变量 OPENAQ_API_KEY  2) ~/.config/air-chart/config  3) ~/.air-chart.env
 openaq_api_key() {
@@ -38,13 +44,23 @@ openaq_api_key() {
 
 openaq_require_key() {
   if ! openaq_api_key >/dev/null; then
-    cat >&2 <<'EOF'
+    if [[ "$(_oac_lang)" == "zh" ]]; then
+      cat >&2 <<'EOF'
 [Notice] 未检测到 OPENAQ_API_KEY。OpenAQ API v3 需要密钥才能访问。
   1. 免费申请: https://explore.openaq.org/register
   2. 任选其一配置:
      export OPENAQ_API_KEY="your_key"                          # 临时/CI
      echo 'OPENAQ_API_KEY=your_key' > ~/.config/air-chart/config # 持久
 EOF
+    else
+      cat >&2 <<'EOF'
+[Notice] OPENAQ_API_KEY not found. OpenAQ API v3 requires a key.
+  1. Get one free at: https://explore.openaq.org/register
+  2. Configure via either:
+     export OPENAQ_API_KEY="your_key"                          # ephemeral/CI
+     echo 'OPENAQ_API_KEY=your_key' > ~/.config/air-chart/config # persistent
+EOF
+    fi
     exit 3
   fi
 }
@@ -97,17 +113,29 @@ _openaq_get() { # _openaq_get <path-with-query> <ttl_seconds>
         sleep "$wait"; backoff=$(( backoff * 2 ))
         (( attempt++ )) ;;
       401|403)
-        air_chart_err "AUTH_ERROR: OPENAQ_API_KEY 无效或未配置 (HTTP $http_code)。"
+        if [[ "$(_oac_lang)" == "zh" ]]; then
+          air_chart_err "AUTH_ERROR: OPENAQ_API_KEY 无效或未配置 (HTTP $http_code)。"
+        else
+          air_chart_err "AUTH_ERROR: OPENAQ_API_KEY is invalid or missing (HTTP $http_code)."
+        fi
         exit 4 ;;
       000)
-        air_chart_err "网络请求失败, 请检查网络连接。"
+        if [[ "$(_oac_lang)" == "zh" ]]; then
+          air_chart_err "网络请求失败, 请检查网络连接。"
+        else
+          air_chart_err "Network request failed. Check your connection."
+        fi
         exit 4 ;;
       *)
-        air_chart_err "API_ERROR: OpenAQ 请求失败 (HTTP $http_code): $(printf '%s' "$body" | head -c 200)"
+        air_chart_err "API_ERROR: OpenAQ request failed (HTTP $http_code): $(printf '%s' "$body" | head -c 200)"
         exit 4 ;;
     esac
   done
-  air_chart_err "RATE_LIMIT: OpenAQ API 请求频率超限, 已退避重试 $AIR_CHART_MAX_RETRY 次, 请稍后重试。"
+  if [[ "$(_oac_lang)" == "zh" ]]; then
+    air_chart_err "RATE_LIMIT: OpenAQ API 请求频率超限, 已退避重试 $AIR_CHART_MAX_RETRY 次, 请稍后重试。"
+  else
+    air_chart_err "RATE_LIMIT: OpenAQ API rate limit hit after $AIR_CHART_MAX_RETRY retries. Please try again later."
+  fi
   exit 4
 }
 

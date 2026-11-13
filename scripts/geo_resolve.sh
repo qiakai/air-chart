@@ -9,6 +9,8 @@ CITIES_TSV="${AIR_CHART_CITIES_TSV:-$GEO_DIR/../data/top_cities.tsv}"
 
 die() { printf 'geo_resolve: %s\n' "$*" >&2; exit 1; }
 
+_lang() { local l="${AIR_CHART_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}"; [[ "$l" == zh* ]] && printf 'zh' || printf 'en'; }
+
 normalize() {
   # 小写、去首尾空白、压缩内部空白为单个空格（便于匹配）
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/[[:space:]]\+/ /g'
@@ -32,7 +34,7 @@ lookup_city() {
 
 main() {
   local input="${1:-}"
-  [[ -z "$input" ]] && { printf 'geo_resolve: 城市名不能为空。\n' >&2; exit 2; }
+  [[ -z "$input" ]] && { if [[ "$(_lang)" == "zh" ]]; then printf 'geo_resolve: 城市名不能为空。\n' >&2; else printf 'geo_resolve: city name must not be empty.\n' >&2; fi; exit 2; }
   # 直接坐标输入: "lat,lon"
   if [[ "$input" =~ ^[[:space:]]*-?[0-9]+(\.[0-9]+)?[[:space:]]*,[[:space:]]*-?[0-9]+(\.[0-9]+)?[[:space:]]*$ ]]; then
     local lat lon
@@ -51,10 +53,15 @@ main() {
 
   # 未命中: 输出相近建议, 便于 Agent 纠错
   local q; q="$(normalize "$input")"
-  printf 'geo_resolve: 城市 "%s" 不在内置坐标库中。\n' "$input" >&2
-  printf '相近候选:\n' >&2
-  awk -F'\t' -v q="$q" 'tolower($1) ~ substr(q,1,3) { printf "  - %s (%s)\n", $1, $2 }' "$CITIES_TSV" | head -5 >&2
-  printf '提示: 也可直接传入坐标, 如 "39.9,116.4"。\n' >&2
+  if [[ "$(_lang)" == "zh" ]]; then
+    printf 'geo_resolve: 城市 "%s" 不在内置坐标库中。\n相近候选:\n' "$input" >&2
+    awk -F'\t' -v q="$q" 'tolower($1) ~ substr(q,1,3) { printf "  - %s (%s)\n", $1, $2 }' "$CITIES_TSV" | head -5 >&2
+    printf '提示: 也可直接传入坐标, 如 "39.9,116.4"。\n' >&2
+  else
+    printf 'geo_resolve: city "%s" not in the built-in gazetteer.\nClose candidates:\n' "$input" >&2
+    awk -F'\t' -v q="$q" 'tolower($1) ~ substr(q,1,3) { printf "  - %s (%s)\n", $1, $2 }' "$CITIES_TSV" | head -5 >&2
+    printf 'Tip: you can also pass coordinates directly, e.g. "39.9,116.4".\n' >&2
+  fi
   exit 2
 }
 

@@ -99,6 +99,8 @@ git clone https://github.com/qiakai/air-chart.git ~/.claude/skills/air-chart
 
 之后对 Agent 说"对比东京和首尔过去 7 天的 PM2.5 走势"即可自动调用。
 
+`SKILL.md` 为英文版（兼容各平台收录与路由），中文版见 `SKILL.zh.md`。
+
 ## 命令参数
 
 | 参数 | 说明 | 取值 |
@@ -108,6 +110,7 @@ git clone https://github.com/qiakai/air-chart.git ~/.claude/skills/air-chart
 | `--period, -t` | 时间跨度（默认 `7d`） | `24h` `48h`（小时级）· `7d` `14d` `30d`（日级） |
 | `--snapshot` | 同城多站点实时快照柱状图 | 开关 |
 | `--theme` | 主题 | `light` / `dark` |
+| `--lang` | 输出语言（图表 + 提示文案） | `en` / `zh`（默认按系统 locale 自动检测） |
 | `--out, -o` | 输出 SVG 路径 | 默认 `./air-chart-<时间戳>.svg` |
 | `--demo` | 演示模式（免 API Key） | 开关 |
 

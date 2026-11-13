@@ -1,91 +1,93 @@
 ---
 name: air-chart
-description: 查询全球城市空气质量（OpenAQ 监测数据）并生成高清 SVG 趋势图表。当用户要求"查看/对比某城市空气质量、PM2.5/PM10/臭氧等污染物走势、生成空气质量图表"时使用。支持单城趋势、多城对比（≤4 城）、单城多指标、同城多站点快照四种模式，自动优选活性政府参考级监测站，叠加 WHO 安全基准线，UTC 自动转站点当地时间。
+description: Query global air-quality data (OpenAQ monitoring network) and render high-resolution SVG trend charts. Use when the user asks to "check/compare air quality in a city, PM2.5/PM10/ozone trends, or generate an air-quality chart". Supports single-city trends, multi-city comparison (up to 4 cities), multi-parameter charts, and multi-station snapshots; automatically prefers active government reference-grade stations, overlays WHO guideline lines, and aligns timestamps to station local time.
 ---
 
-# air-chart — 空气质量图表生成 Skill
+# air-chart — Air Quality Chart Generation Skill
 
-## 能力概述
+## What it does
 
-从自然语言查询到 SVG 图表的端到端闭环：城市解析 → OpenAQ 站点优选 → 数据清洗 → 矢量图表渲染。
-零重型依赖：仅需 `bash`、`jq`、`awk`、`curl`（渲染器为纯 awk 实现，不依赖 Python/Node）。
+End-to-end pipeline from a natural-language query to an SVG chart:
+city resolution → OpenAQ station selection → data cleaning → vector chart rendering.
+Zero heavy dependencies: only `bash`, `jq`, `awk`, `curl` (the renderer is pure awk — no Python/Node required).
 
-## 触发场景
+## When to use
 
-用户提出以下意图时调用本 Skill：
+Invoke this skill when the user asks things like:
 
-- "看看北京最近一周 PM2.5 走势"
-- "对比东京和首尔过去 7 天的空气质量"
-- "德里过去 30 天 PM10 日均值，和 WHO 标准对比出图"
-- "新加坡最近 48 小时臭氧和 PM2.5 的小时变化"
-- "生成某城市空气质量图表/折线图/对比图"
+- "Show me Beijing's PM2.5 over the past week"
+- "Compare Tokyo and Seoul air quality for the last 7 days"
+- "Delhi PM10 daily averages over 30 days vs the WHO limit"
+- "Hourly ozone in Singapore for the past 48 hours"
+- "Generate an air-quality chart"
 
-## 调用方式
+## How to call
 
 ```bash
-scripts/air_chart.sh --city <城市> [--city <城市2> ...] [--param <指标>] [--period <跨度>] [选项]
+scripts/air_chart.sh --city <city> [--city <city2> ...] [--param <pollutant>] [--period <range>] [options]
 ```
 
-### 参数
+### Options
 
-| 参数 | 说明 | 取值 |
+| Option | Description | Values |
 | --- | --- | --- |
-| `--city, -c` | 城市名（内置约 200 个全球主要城市，支持大小写/别名模糊匹配），或直接传坐标 `"lat,lon"`。可重复，最多 4 个 | 如 `Beijing`、`New Delhi`、`39.9,116.4` |
-| `--param, -p` | 污染物指标，默认 `pm25`。单城可传多个，多城对比只能传一个 | `pm25` `pm10` `o3` `no2` `so2` `co` |
-| `--period, -t` | 时间跨度，默认 `7d`。`24h/48h` 按小时聚合，`7d/14d/30d` 按天聚合 | `24h` `48h` `7d` `14d` `30d` |
-| `--snapshot` | 快照模式：同城多个活性站点当前值横向柱状图（默认取前 6 个站点） | 开关 |
-| `--theme` | 图表主题 | `light`（默认）/ `dark` |
-| `--out, -o` | 输出 SVG 路径 | 默认 `./air-chart-<时间戳>.svg` |
-| `--demo` | 演示模式：使用内置模拟数据，无需 API Key，用于预览与联调 | 开关 |
+| `--city, -c` | City name (built-in gazetteer of ~250 world cities, case-insensitive, Chinese names supported) or raw `"lat,lon"`. Repeatable, up to 4 | e.g. `Beijing`, `New Delhi`, `中山`, `39.9,116.4` |
+| `--param, -p` | Pollutant, default `pm25`. Multiple allowed for a single city; only one for multi-city | `pm25` `pm10` `o3` `no2` `so2` `co` |
+| `--period, -t` | Time range, default `7d`. `24h/48h` aggregate hourly; `7d/14d/30d` daily | `24h` `48h` `7d` `14d` `30d` |
+| `--snapshot` | Snapshot mode: horizontal bar chart of current values across the city's active stations (top 6) | flag |
+| `--theme` | Color theme | `light` (default) / `dark` |
+| `--lang` | Output language | `en` / `zh` (default: auto-detect from system locale) |
+| `--out, -o` | Output SVG path | default `./air-chart-<timestamp>.svg` |
+| `--demo` | Demo mode with built-in sample data; no API key needed | flag |
 
-### 模式自动判定
+### Mode auto-selection
 
-- 1 城市 × 1 指标 → 单城趋势折线图
-- 多城市 × 1 指标 → 多城对比折线图（高对比度色板）
-- 1 城市 × 多指标 → 单城多指标折线图
-- `--snapshot` → 同城多站点横向柱状图
+- 1 city × 1 parameter → single-city trend line chart
+- Multiple cities × 1 parameter → multi-city comparison line chart (high-contrast palette)
+- 1 city × multiple parameters → multi-parameter line chart
+- `--snapshot` → multi-station horizontal bar chart
 
-## 前置条件
+## Prerequisites
 
-需要 OpenAQ API Key（免费）：`https://explore.openaq.org/register`
+An OpenAQ API key (free): `https://explore.openaq.org/register`
 
-- 环境变量（临时/CI）：`export OPENAQ_API_KEY="..."`
-- 配置文件（持久）：`echo 'OPENAQ_API_KEY=...' > ~/.config/air-chart/config`（也识别 `~/.air-chart.env`）
+- Ephemeral/CI: `export OPENAQ_API_KEY="..."`
+- Persistent: `echo 'OPENAQ_API_KEY=...' > ~/.config/air-chart/config` (`~/.air-chart.env` also recognized)
 
-未配置时脚本以退出码 3 退出并输出注册引导，不会产生未捕获异常。
+Without a key the script exits with code 3 and prints setup guidance — never an unhandled error.
 
-## 输出解读（Agent 指引）
+## Output guide (for agents)
 
-脚本 stdout 末尾输出 `[air-chart] 图表已生成: <路径>` 与数据摘要（站点名、参考级标记、n/min/max/avg、单位）。
-Agent 应：
+The script prints `[air-chart] Chart saved: <path>` plus a data summary (station name,
+reference-grade flag, n/min/max/avg, units). The agent should:
 
-1. 向用户展示 SVG 文件路径（Markdown 中可内联引用该 SVG）。
-2. 摘要数据以文本形式呈现，注明单位为**物理浓度**（µg/m³ 等），而非 AQI 指数。
-3. 图表默认叠加 WHO 24 小时基准虚线（阈值见 `data/parameters.tsv`：PM2.5=15、PM10=45、O3=100、NO2=25、SO2=40 µg/m³，CO=4 mg/m³），达标显示绿色、超标显示红色，可据此说明达标/超标情况；若站点传感器单位与默认单位不一致（如 ppm），基准线自动隐藏以防止量纲误导。
+1. Show the user the SVG path (it can be inlined in Markdown).
+2. Present the summary as text, noting the units are **physical concentration** (e.g. µg/m³), not AQI.
+3. Charts overlay the WHO 24-hour guideline by default (see `data/parameters.tsv`: PM2.5=15, PM10=45, O3=100, NO2=25, SO2=40 µg/m³, CO=4 mg/m³) — green when compliant, red when exceeded. If a station reports non-default units (e.g. ppm), the line is auto-suppressed to avoid dimensional confusion.
 
-## 异常与降级处理
+## Errors & degradation
 
-| 情况 | 退出码 | 行为 |
+| Case | Exit code | Behavior |
 | --- | --- | --- |
-| 未配置 API Key | 3 | 输出注册引导链接与配置命令 |
-| 网络/API 异常、鉴权失败、限流重试耗尽 | 4 | 明确错误信息（含 HTTP 状态码） |
-| 城市不在内置库 | 2 | 输出相近候选城市列表，并提示可传坐标 |
-| 无活性站点 / 无有效数据 | 5 | 说明原因并建议更换城市/指标/时间范围 |
-| 24h 无活性站点 | — | 自动放宽到 72h 重试一次 |
+| Missing API key | 3 | Prints registration link and setup commands |
+| Network/API/auth failure, rate-limit retries exhausted | 4 | Clear message with HTTP status |
+| City not in gazetteer | 2 | Prints close candidates; suggests passing coordinates |
+| No active station / no valid data | 5 | Explains why; suggests another city/parameter/period |
+| No active station within 24h | — | Automatically retries with a 72h window |
 
-- 多城对比中个别城市失败时，其余城市正常出图，Agent 应告知用户哪个城市失败及原因。
-- 请求具缓存（小时级 20 分钟、日级 2 小时，存于 `~/.cache/air-chart/`），重复查询秒级返回。
+- In multi-city mode, if one city fails the rest still render; tell the user which city failed and why.
+- Responses are cached (`~/.cache/air-chart/`, 20 min for hourly / 2 h for daily data), so repeat queries return in well under a second.
 
-## 实现要点（供维护者）
+## Implementation notes (for maintainers)
 
-- `scripts/geo_resolve.sh`：城市→坐标/时区（`data/top_cities.tsv`），坐标直传兜底。
-- `scripts/openaq_client.sh`：API v3 封装（X-API-Key 鉴权、User-Agent 标识、md5 缓存、429 指数退避、活性过滤、按参数固定 ID 匹配传感器、参考级站点优先）。
-- `data/parameters.tsv`：静态参数字典（slug / 固定 ID / 名称 / 单位 / WHO 24h 基准 / 物理上限 / 指标专属色），消除冗余 `/parameters` 探测。
-- `scripts/data_transform.awk`：负值/超物理上限尖峰剔除、断点检测（缺口插入空行，折线断开而非插值、严禁填 0）、min/max/avg 统计。
-- `scripts/render_draw.sh`：纯 awk SVG 渲染（折线/柱状、WHO 虚线、图例、浅深主题）。
+- `scripts/geo_resolve.sh`: city → coordinates/timezone (`data/top_cities.tsv`), raw-coordinate fallback.
+- `scripts/openaq_client.sh`: API v3 wrapper (X-API-Key auth, User-Agent, md5 cache, 429 exponential backoff, liveness filter, sensor match by fixed parameter ID, reference-grade first).
+- `data/parameters.tsv`: static parameter dictionary (slug / fixed ID / name / unit / WHO 24h guideline / physical cap / per-parameter color) — no redundant `/parameters` round-trips.
+- `scripts/data_transform.awk`: negative/extreme-spike filtering, gap detection (breaks the line, never zero-fills), min/max/avg stats.
+- `scripts/render_draw.sh`: pure-awk SVG renderer (lines/bars, WHO guideline, legend, light/dark themes).
 
-## 视觉规范（对齐 openaq-explorer）
+## Visual spec (aligned with openaq-explorer)
 
-- 指标专属色板：PM2.5 `#E65100`、PM10 `#6A1B9A`、O3 `#0277BD`、NO2 `#00838F`（深色主题为对应浅色变体）。
-- 多城对比色盲友好色板：`#2563EB` / `#DC2626` / `#059669` / `#D97706`。
-- WHO 基准线：`dasharray="4,4"`，全部数据达标为安全绿 `#10B981`，存在超标为警戒红 `#EF4444`，右侧标签含数值与单位（如 `WHO 24h: 15 µg/m³`）。
+- Per-parameter palette: PM2.5 `#E65100`, PM10 `#6A1B9A`, O3 `#0277BD`, NO2 `#00838F` (lighter variants in dark theme).
+- Multi-city colorblind-friendly palette: `#2563EB` / `#DC2626` / `#059669` / `#D97706`.
+- WHO guideline line: `dasharray="4,4"`, safety green `#10B981` when all data complies, alert red `#EF4444` otherwise; label includes value and unit (e.g. `WHO 24h: 15 µg/m³`).

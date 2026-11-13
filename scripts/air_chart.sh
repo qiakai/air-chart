@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# air_chart.sh — air-chart 主入口
-# 自然语言查询 -> OpenAQ 站点优选 -> 数据清洗 -> SVG 图表
+# air_chart.sh — air-chart main entry
+# Natural-language query -> OpenAQ station pick -> data cleaning -> SVG chart
 #
-# 用法:
+# Usage:
 #   air_chart.sh --city Beijing --param pm25 --period 7d
-#   air_chart.sh --city Tokyo --city Seoul --param pm25 --period 7d     # 多城对比
-#   air_chart.sh --city Beijing --param pm25 --param pm10 --period 48h  # 单城多指标
-#   air_chart.sh --city Delhi --param pm10 --snapshot                   # 同城多站点快照
-#   air_chart.sh --city Beijing --param pm25 --period 7d --demo         # 演示数据(免 API Key)
+#   air_chart.sh --city Tokyo --city Seoul --param pm25 --period 7d     # multi-city compare
+#   air_chart.sh --city Beijing --param pm25 --param pm10 --period 48h  # multi-parameter
+#   air_chart.sh --city Delhi --param pm10 --snapshot                   # station snapshot
+#   air_chart.sh --city Beijing --param pm25 --period 7d --demo         # demo data (no API key)
+# Options: --city/-c --param/-p --period/-t --snapshot --theme --lang en|zh --out/-o --demo
+# Language: auto-detected from system locale (zh -> Chinese), override with --lang.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,6 +18,100 @@ source "$SCRIPT_DIR/openaq_client.sh"
 
 # ---------- 参数默认值 ----------
 CITIES=(); PARAMS=("pm25"); PERIOD="7d"; SNAPSHOT=0; THEME="light"; OUT=""; DEMO=0
+LANG_OPT=""
+
+usage() { sed -n '2,15p' "${BASH_SOURCE[0]}"; }
+
+while (( $# )); do
+  case "$1" in
+    -c|--city) CITIES+=("$2"); shift 2 ;;
+    -p|--param) PARAMS+=("$2"); shift 2 ;;
+    -t|--period) PERIOD="$2"; shift 2 ;;
+    --snapshot) SNAPSHOT=1; shift ;;
+    --theme) THEME="$2"; shift 2 ;;
+    --lang) LANG_OPT="$2"; shift 2 ;;
+    -o|--out) OUT="$2"; shift 2 ;;
+    --demo) DEMO=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) printf '[air-chart] ERROR: 未知参数 %s\n' "$1" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+# ---------- 语言 (默认按系统 locale 自动检测, --lang 覆盖) ----------
+detect_lang() {
+  local l="${LANG_OPT:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}"
+  [[ "$l" == zh* ]] && printf 'zh' || printf 'en'
+}
+AIR_CHART_LANG="$(detect_lang)"
+export AIR_CHART_LANG
+
+# 文案表 (key: en/zh)
+declare -A T_EN T_ZH
+T_EN[err_no_city]="Please specify at least one city via --city."
+T_ZH[err_no_city]="请至少通过 --city 指定一个城市。"
+T_EN[err_too_many_cities]="Multi-city comparison supports at most 4 cities."
+T_ZH[err_too_many_cities]="多城对比最多支持 4 个城市。"
+T_EN[err_bad_param]='Unsupported parameter "%s" (choose from: %s).'
+T_ZH[err_bad_param]='不支持的指标 "%s" (可选: %s)。'
+T_EN[err_multi_param]="Multi-city comparison supports only one --param."
+T_ZH[err_multi_param]="多城对比模式仅支持单指标, 请只传一个 --param。"
+T_EN[err_bad_period]='Unsupported period "%s" (choose from: 24h 48h 7d 14d 30d).'
+T_ZH[err_bad_period]='不支持的时间跨度 "%s" (可选: 24h 48h 7d 14d 30d)。'
+T_EN[err_no_series]="Nothing to plot. Check the city/parameter/period, or use --demo to preview."
+T_ZH[err_no_series]="没有任何序列可绘制。请检查城市名/指标/时间范围, 或使用 --demo 预览效果。"
+T_EN[warn_no_active]="WARN: no active monitoring station within 25km of %s (no update in 24-72h)."
+T_ZH[warn_no_active]="WARN: %s 附近 25km 内没有活性监测站点 (24-72h 内无数据更新)。"
+T_EN[warn_no_sensor]="WARN: active stations of %s have no %s sensor data, skipped."
+T_ZH[warn_no_sensor]="WARN: %s 的活性站点中暂无 %s 传感器数据, 已跳过。"
+T_EN[warn_no_data]="WARN: no valid data points for %s %s in the selected period."
+T_ZH[warn_no_data]="WARN: %s %s 在时间范围内无有效数据点。"
+T_EN[warn_no_snapshot]="WARN: no active %s stations near %s for snapshot."
+T_ZH[warn_no_snapshot]="WARN: %s 附近没有可用于快照的活性 %s 站点。"
+T_EN[warn_no_latest]="WARN: latest data unavailable for all stations."
+T_ZH[warn_no_latest]="WARN: 站点最新数据均不可用。"
+T_EN[note_who_skipped]="NOTE: sensor units differ from the dictionary default; WHO guideline line skipped to avoid dimensional confusion."
+T_ZH[note_who_skipped]="NOTE: 站点传感器单位与默认单位不一致, 已跳过 WHO 基准线以避免量纲误导。"
+T_EN[demo_note]="demo mode (real API not called)"
+T_ZH[demo_note]="演示数据模式 (未请求真实 API)"
+T_EN[ref_grade]="(reference-grade)"
+T_ZH[ref_grade]="(参考级)"
+T_EN[summary]="Data summary:"
+T_ZH[summary]="数据摘要:"
+T_EN[chart_saved]="Chart saved:"
+T_ZH[chart_saved]="图表已生成:"
+T_EN[snapshot_saved]="Snapshot saved:"
+T_ZH[snapshot_saved]="快照已生成:"
+T_EN[station]="Station"
+T_ZH[station]="站点"
+T_EN[latest]="latest"
+T_ZH[latest]="最新"
+T_EN[title_compare]="%s comparison · last %s"
+T_ZH[title_compare]="%s 走势对比 · 最近 %s"
+T_EN[sub_compare]="Source: OpenAQ · multi-city same-parameter · station local time"
+T_ZH[sub_compare]="数据来源 OpenAQ · 多城市同指标对比 · 站点当地时间"
+T_EN[title_single]="%s %s trend · last %s"
+T_ZH[title_single]="%s %s 趋势 · 最近 %s"
+T_EN[sub_multi_param]="Source: OpenAQ · multi-parameter single city · station local time"
+T_ZH[sub_multi_param]="数据来源 OpenAQ · 单城市多指标对比 · 站点当地时间"
+T_EN[sub_single]="Source: OpenAQ · station local time (%s)"
+T_ZH[sub_single]="数据来源 OpenAQ · 站点当地时间 (%s)"
+T_EN[ylabel_multi]="Concentration (%s)"
+T_ZH[ylabel_multi]="浓度 (%s)"
+T_EN[title_snapshot]="%s %s real-time snapshot by station"
+T_ZH[title_snapshot]="%s 各监测点 %s 实时快照"
+T_EN[sub_snapshot]="Source: OpenAQ · %s · active stations within 25km"
+T_ZH[sub_snapshot]="数据来源 OpenAQ · %s · 25km 半径内活性站点"
+T_EN[demo_tag]=" (demo)"
+T_ZH[demo_tag]=" (演示)"
+T_EN[demo_mode_tag]=" · demo mode"
+T_ZH[demo_mode_tag]=" · 演示模式"
+T_EN[sub_snapshot_demo]="Source: OpenAQ · demo mode · active stations within 25km"
+T_ZH[sub_snapshot_demo]="数据来源 OpenAQ · 演示模式 · 25km 半径内活性站点"
+
+t() { # t <key> — 取当前语言文案
+  if [[ "$AIR_CHART_LANG" == "zh" ]]; then printf '%s' "${T_ZH[$1]:-${T_EN[$1]}}"; else printf '%s' "${T_EN[$1]}"; fi
+}
+
 VALID_PARAMS="$(param_slugs)"
 # 从 data/parameters.tsv 静态字典加载指标元数据 (列: 3名称 4单位 5WHO基准 6上限 7色 8深色色)
 declare -A WHO_BASELINE PARAM_LABEL PARAM_UNITS PARAM_CAP PARAM_COLOR PARAM_COLOR_DARK
@@ -25,31 +121,15 @@ while IFS=$'\t' read -r slug pid pname punits pwho pcap pcolor pcolord; do
   PARAM_CAP[$slug]="$pcap"; PARAM_COLOR[$slug]="$pcolor"; PARAM_COLOR_DARK[$slug]="$pcolord"
 done < "$PARAMS_TSV"
 
-usage() { sed -n '2,14p' "${BASH_SOURCE[0]}"; }
-
-while (( $# )); do
-  case "$1" in
-    -c|--city) CITIES+=("$2"); shift 2 ;;
-    -p|--param) PARAMS+=("$2"); shift 2 ;;
-    -t|--period) PERIOD="$2"; shift 2 ;;
-    --snapshot) SNAPSHOT=1; shift ;;
-    --theme) THEME="$2"; shift 2 ;;
-    -o|--out) OUT="$2"; shift 2 ;;
-    --demo) DEMO=1; shift ;;
-    -h|--help) usage; exit 0 ;;
-    *) printf '[air-chart] ERROR: 未知参数 %s\n' "$1" >&2; usage >&2; exit 1 ;;
-  esac
-done
-
 # 默认参数修正: --param 显式传入时去掉默认值
 if (( ${#PARAMS[@]} > 1 )) && [[ "${PARAMS[0]}" == "pm25" ]]; then PARAMS=("${PARAMS[@]:1}"); fi
-[[ ${#CITIES[@]} -eq 0 ]] && { printf '[air-chart] ERROR: 请至少通过 --city 指定一个城市。\n' >&2; exit 1; }
-[[ ${#CITIES[@]} -gt 4 ]] && { printf '[air-chart] ERROR: 多城对比最多支持 4 个城市。\n' >&2; exit 1; }
+[[ ${#CITIES[@]} -eq 0 ]] && { printf '[air-chart] ERROR: %s\n' "$(t err_no_city)" >&2; exit 1; }
+[[ ${#CITIES[@]} -gt 4 ]] && { printf '[air-chart] ERROR: %s\n' "$(t err_too_many_cities)" >&2; exit 1; }
 for p in "${PARAMS[@]}"; do
-  [[ " $VALID_PARAMS " == *" $p "* ]] || { printf '[air-chart] ERROR: 不支持的指标 "%s" (可选: %s)。\n' "$p" "$VALID_PARAMS" >&2; exit 1; }
+  [[ " $VALID_PARAMS " == *" $p "* ]] || { printf '[air-chart] ERROR: '"$(t err_bad_param)"'\n' "$p" "$VALID_PARAMS" >&2; exit 1; }
 done
 if (( ${#CITIES[@]} > 1 && ${#PARAMS[@]} > 1 )); then
-  printf '[air-chart] ERROR: 多城对比模式仅支持单指标, 请只传一个 --param。\n' >&2; exit 1
+  printf '[air-chart] ERROR: %s\n' "$(t err_multi_param)" >&2; exit 1
 fi
 
 case "$PERIOD" in
@@ -58,7 +138,7 @@ case "$PERIOD" in
   7d)  GRAN="days";  HOURS=$((7 * 24)) ;;
   14d) GRAN="days";  HOURS=$((14 * 24)) ;;
   30d) GRAN="days";  HOURS=$((30 * 24)) ;;
-  *) printf '[air-chart] ERROR: 不支持的时间跨度 "%s" (可选: 24h 48h 7d 14d 30d)。\n' "$PERIOD" >&2; exit 1 ;;
+  *) printf '[air-chart] ERROR: '"$(t err_bad_period)"'\n' "$PERIOD" >&2; exit 1 ;;
 esac
 
 [[ -z "$OUT" ]] && OUT="./air-chart-$(date +%Y%m%d-%H%M%S).svg"
@@ -111,7 +191,7 @@ fetch_city_series() { # <city> -> 为每个 param 生成 series 文件, 输出�
     active="$(openaq_filter_active "$locations" 72)"
   fi
   if [[ "$(jq '(.results // []) | length' <<<"$active")" == "0" ]]; then
-    printf '[air-chart] WARN: %s 附近 25km 内没有活性监测站点 (24-72h 内无数据更新)。\n' "$city" >&2
+    printf '[air-chart] '"$(t warn_no_active)"'\n' "$city" >&2
     return 1
   fi
 
@@ -119,7 +199,7 @@ fetch_city_series() { # <city> -> 为每个 param 生成 series 文件, 输出�
     local picked
     picked="$(openaq_pick_sensor "$active" "$param")"
     if [[ -z "$picked" ]]; then
-      printf '[air-chart] WARN: %s 的活性站点中暂无 %s 传感器数据, 已跳过。\n' "$city" "${PARAM_LABEL[$param]}" >&2
+      printf '[air-chart] '"$(t warn_no_sensor)"'\n' "$city" "${PARAM_LABEL[$param]}" >&2
       continue
     fi
     local sensor_id units stz sname monitor
@@ -134,7 +214,7 @@ fetch_city_series() { # <city> -> 为每个 param 生成 series 文件, 输出�
     awk -v gran="$GRAN" -v cap="${PARAM_CAP[$param]}" -v stats="$WORK/${geo_name}.${param}.stats" \
         -f "$SCRIPT_DIR/data_transform.awk" <<<"$raw" > "$clean"
     if [[ ! -s "$clean" ]]; then
-      printf '[air-chart] WARN: %s %s 在时间范围内无有效数据点。\n' "$city" "${PARAM_LABEL[$param]}" >&2
+      printf '[air-chart] '"$(t warn_no_data)"'\n' "$city" "${PARAM_LABEL[$param]}" >&2
       continue
     fi
     RENDER_SPECS+=("${geo_name} ${PARAM_LABEL[$param]}:${clean}")
@@ -145,7 +225,7 @@ fetch_city_series() { # <city> -> 为每个 param 生成 series 文件, 输出�
     st_max="$(awk -F'\t' '$1=="max"{print $2}' "$WORK/${geo_name}.${param}.stats")"
     st_avg="$(awk -F'\t' '$1=="avg"{print $2}' "$WORK/${geo_name}.${param}.stats")"
     if [[ -n "$st_max" && ( -z "$GLOBAL_MAX" || "$(awk -v a="$GLOBAL_MAX" -v b="$st_max" 'BEGIN{print (b>a)?1:0}')" == "1" ) ]]; then GLOBAL_MAX="$st_max"; fi
-    CITY_NOTES+=("  - ${geo_name} · ${PARAM_LABEL[$param]} · 站点: ${sname}$( [[ "$monitor" == "true" ]] && echo ' (参考级)') · n=${st_cnt} min=${st_min} max=${st_max} avg=$(printf '%.1f' "$st_avg") ${units}")
+    CITY_NOTES+=("  - ${geo_name} · ${PARAM_LABEL[$param]} · $(t station): ${sname}$( [[ "$monitor" == "true" ]] && echo " $(t ref_grade)") · n=${st_cnt} min=${st_min} max=${st_max} avg=$(printf '%.1f' "$st_avg") ${units}")
   done
 }
 
@@ -163,7 +243,7 @@ fetch_city_snapshot() { # <city> <param> -> 渲染柱状图所需 items
   local sensors
   sensors="$(openaq_pick_all_sensors "$active" "$param" | head -6)"
   if [[ -z "$sensors" ]]; then
-    printf '[air-chart] WARN: %s 附近没有可用于快照的活性 %s 站点。\n' "$city" "${PARAM_LABEL[$param]}" >&2
+    printf '[air-chart] '"$(t warn_no_snapshot)"'\n' "$city" "${PARAM_LABEL[$param]}" >&2
     return 1
   fi
   local items=() units=""
@@ -175,9 +255,9 @@ fetch_city_snapshot() { # <city> <param> -> 渲染柱状图所需 items
     v="$(cut -f3 <<<"$latest")"; utc_ts="$(cut -f1 <<<"$latest")"
     [[ -z "$units" ]] && units="$u"
     items+=("${s_name}:${v}")
-    CITY_NOTES+=("  - ${s_name}$( [[ "$monitor" == "true" ]] && echo ' (参考级)') · 最新: ${v} ${u} @ ${utc_ts} UTC")
+    CITY_NOTES+=("  - ${s_name}$( [[ "$monitor" == "true" ]] && echo " $(t ref_grade)") · $(t latest): ${v} ${u} @ ${utc_ts} UTC")
   done <<<"$sensors"
-  [[ ${#items[@]} -eq 0 ]] && { printf '[air-chart] WARN: 站点最新数据均不可用。\n' >&2; return 1; }
+  [[ ${#items[@]} -eq 0 ]] && { printf '[air-chart] %s\n' "$(t warn_no_latest)" >&2; return 1; }
   [[ -z "$units" || "$units" == "null" ]] && units="${PARAM_UNITS[$param]}"
   FIRST_UNITS="$units"
   local who="${WHO_BASELINE[$param]}"
@@ -192,8 +272,8 @@ fetch_city_snapshot() { # <city> <param> -> 渲染柱状图所需 items
   fi
   local snap_color="${PARAM_COLOR[$param]}"; [[ "$THEME" == "dark" ]] && snap_color="${PARAM_COLOR_DARK[$param]}"
   "$SCRIPT_DIR/render_draw.sh" bar \
-    --title "$geo_name 各监测点 ${PARAM_LABEL[$param]} 实时快照" \
-    --subtitle "数据来源 OpenAQ · $(TZ="$tz" date '+%Y-%m-%d %H:%M %Z') · 25km 半径内活性站点" \
+    --title "$(printf "$(t title_snapshot)" "$geo_name" "${PARAM_LABEL[$param]}")" \
+    --subtitle "$(printf "$(t sub_snapshot)" "$(TZ="$tz" date '+%Y-%m-%d %H:%M %Z')")" \
     --ylabel "$units" \
     --items "${items[@]}" --colors "$snap_color" \
     ${who_args[@]+"${who_args[@]}"} \
@@ -214,21 +294,25 @@ if (( SNAPSHOT )); then
   if (( DEMO )); then
     # 演示快照
     demo_city="${CITIES[0]}"
-    items=("朝阳公园:32.4" "奥体中心:45.1" "万寿西宫:51.8" "通州:58.2" "昌平:26.9" "大兴:63.5")
+    if [[ "$AIR_CHART_LANG" == "zh" ]]; then
+      items=("朝阳公园:32.4" "奥体中心:45.1" "万寿西宫:51.8" "通州:58.2" "昌平:26.9" "大兴:63.5")
+    else
+      items=("Chaoyang Park:32.4" "Olympic Center:45.1" "Wanshou Xigong:51.8" "Tongzhou:58.2" "Changping:26.9" "Daxing:63.5")
+    fi
     FIRST_UNITS="µg/m³"
-    CITY_NOTES=("  - 演示数据模式, 未请求真实 API")
+    CITY_NOTES=("  - $(t demo_note)")
     snap_max=63.5
     [[ "$(awk -v a="$snap_max" -v b="$snap_who" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && snap_whoc="#10B981" || snap_whoc="#EF4444"
     "$SCRIPT_DIR/render_draw.sh" bar \
-      --title "$demo_city 各监测点 ${PARAM_LABEL[$snap_param]} 实时快照 (演示)" \
-      --subtitle "数据来源 OpenAQ · 演示模式 · 25km 半径内活性站点" \
+      --title "$(printf "$(t title_snapshot)" "$demo_city" "${PARAM_LABEL[$snap_param]}")$(t demo_tag)" \
+      --subtitle "$(t sub_snapshot_demo)" \
       --ylabel "$snap_units" --items "${items[@]}" --colors "$snap_color" \
       --who "$snap_who" --who-label "WHO 24h: $snap_who $snap_units" --who-color "$snap_whoc" --theme "$THEME" \
       --width 960 --height 480 --out "$OUT"
   else
     fetch_city_snapshot "${CITIES[0]}" "${PARAMS[0]}"
   fi
-  printf '\n[air-chart] 快照已生成: %s\n%s\n' "$OUT" "${CITY_NOTES[*]}"
+  printf '\n[air-chart] %s %s\n%s\n' "$(t snapshot_saved)" "$OUT" "${CITY_NOTES[*]}"
   exit 0
 fi
 
@@ -246,14 +330,14 @@ for city in "${CITIES[@]}"; do
       dmax="$(awk -F'\t' '$2!=""{if($2>m)m=$2}END{print m+0}' "$clean")"
       if [[ -z "$GLOBAL_MAX" || "$(awk -v a="$GLOBAL_MAX" -v b="$dmax" 'BEGIN{print (b>a)?1:0}')" == "1" ]]; then GLOBAL_MAX="$dmax"; fi
     done
-    CITY_NOTES+=("  - ${geo_name}: 演示数据模式 (未请求真实 API)")
+    CITY_NOTES+=("  - ${geo_name}: $(t demo_note)")
   else
     fetch_city_series "$city" || true
   fi
 done
 
 if (( ${#RENDER_SPECS[@]} == 0 )); then
-  printf '[air-chart] ERROR: 没有任何序列可绘制。请检查城市名/指标/时间范围, 或使用 --demo 预览效果。\n' >&2
+  printf '[air-chart] ERROR: %s\n' "$(t err_no_series)" >&2
   exit 5
 fi
 
@@ -264,16 +348,16 @@ param_labels=""
 for p in "${PARAMS[@]}"; do param_labels+="${param_labels:+ / }${PARAM_LABEL[$p]}"; done
 ylabel="${PARAM_LABEL[$param0]} (${FIRST_UNITS})"
 if (( city_count > 1 )); then
-  title="${PARAM_LABEL[$param0]} 走势对比 · 最近 $PERIOD"
-  subtitle="数据来源 OpenAQ · 多城市同指标对比 · 站点当地时间"
+  title="$(printf "$(t title_compare)" "${PARAM_LABEL[$param0]}" "$PERIOD")"
+  subtitle="$(t sub_compare)"
 else
   gname="${FIRST_GEO_NAME:-${CITIES[0]}}"
-  title="$gname $param_labels 趋势 · 最近 $PERIOD"
+  title="$(printf "$(t title_single)" "$gname" "$param_labels" "$PERIOD")"
   if (( ${#PARAMS[@]} > 1 )); then
-    subtitle="数据来源 OpenAQ · 单城市多指标对比 · 站点当地时间"
-    ylabel="浓度 (${FIRST_UNITS})"
+    subtitle="$(t sub_multi_param)"
+    ylabel="$(printf "$(t ylabel_multi)" "$FIRST_UNITS")"
   else
-    subtitle="数据来源 OpenAQ · 站点当地时间 ($FIRST_TZ)"
+    subtitle="$(printf "$(t sub_single)" "$FIRST_TZ")"
   fi
 fi
 
@@ -289,7 +373,7 @@ if [[ -n "${WHO_BASELINE[$param0]:-}" ]]; then
     [[ -n "$GLOBAL_MAX" && "$(awk -v a="$GLOBAL_MAX" -v b="${WHO_BASELINE[$param0]}" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && whoc="#10B981"
     who_args=(--who "${WHO_BASELINE[$param0]}" --who-label "WHO 24h: ${WHO_BASELINE[$param0]} ${PARAM_UNITS[$param0]}" --who-color "$whoc")
   else
-    printf '[air-chart] NOTE: 站点传感器单位与默认单位不一致, 已跳过 WHO 基准线以避免量纲误导。\n' >&2
+    printf '[air-chart] NOTE: %s\n' "$(t note_who_skipped)" >&2
   fi
 fi
 
@@ -312,7 +396,7 @@ fi
   ${who_args[@]+"${who_args[@]}"} \
   --theme "$THEME" --out "$OUT"
 
-printf '\n[air-chart] 图表已生成: %s\n' "$OUT"
+printf '\n[air-chart] %s %s\n' "$(t chart_saved)" "$OUT"
 if (( ${#CITY_NOTES[@]} )); then
-  printf '[air-chart] 数据摘要:\n%s\n' "${CITY_NOTES[*]}"
+  printf '[air-chart] %s\n%s\n' "$(t summary)" "${CITY_NOTES[*]}"
 fi

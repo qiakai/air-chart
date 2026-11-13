@@ -97,6 +97,8 @@ git clone https://github.com/qiakai/air-chart.git ~/.claude/skills/air-chart
 
 Then just ask your agent: *"Compare PM2.5 in Tokyo and Seoul over the past 7 days."*
 
+`SKILL.md` is written in English for the broadest agent/registry compatibility; a Chinese version is kept at `SKILL.zh.md`.
+
 ## CLI reference
 
 | Flag | Description | Values |
@@ -106,6 +108,7 @@ Then just ask your agent: *"Compare PM2.5 in Tokyo and Seoul over the past 7 day
 | `--period, -t` | Time range (default `7d`) | `24h` `48h` (hourly) · `7d` `14d` `30d` (daily) |
 | `--snapshot` | Multi-station real-time snapshot bar chart | flag |
 | `--theme` | Color theme | `light` / `dark` |
+| `--lang` | Output language (charts + messages) | `en` / `zh` (default: auto-detect from system locale) |
 | `--out, -o` | Output SVG path | default `./air-chart-<timestamp>.svg` |
 | `--demo` | Demo mode, no API key needed | flag |
 
