@@ -138,7 +138,6 @@ if [[ "$MODE" == "line" ]]; then
     if (who != "") {
       y = mt + ph - ph * (who + 0) / ymax
       printf "<line x1=\"%d\" y1=\"%.1f\" x2=\"%d\" y2=\"%.1f\" stroke=\"%s\" stroke-width=\"1.5\" stroke-dasharray=\"4,4\"/>\n", ml, y, ml + pw, y, whoc >> outfile
-      printf "<text x=\"%d\" y=\"%.1f\" font-size=\"11\" fill=\"%s\" text-anchor=\"end\" font-weight=\"600\">%s</text>\n", ml + pw - 6, y - 6, whoc, esc(wholabel) >> outfile
     }
     # 数据折线 (空值为断点)
     for (i = 1; i <= ns; i++) {
@@ -161,6 +160,13 @@ if [[ "$MODE" == "line" ]]; then
         gsub(/ $/, "", pts)
         printf "<polyline fill=\"none\" stroke=\"%s\" stroke-width=\"2\" stroke-linejoin=\"round\" stroke-linecap=\"round\" points=\"%s\"/>\n", c, pts >> outfile
       }
+    }
+    # WHO 标签最后绘制并加底色衬底, 避免与折线交叠
+    if (who != "") {
+      y = mt + ph - ph * (who + 0) / ymax
+      wl = length(wholabel) * 7 + 10
+      printf "<rect x=\"%d\" y=\"%.1f\" width=\"%d\" height=\"15\" fill=\"%s\"/>\n", ml + pw - 6 - wl, y - 17, wl, bg >> outfile
+      printf "<text x=\"%d\" y=\"%.1f\" font-size=\"11\" fill=\"%s\" text-anchor=\"end\" font-weight=\"600\">%s</text>\n", ml + pw - 6, y - 6, whoc, esc(wholabel) >> outfile
     }
     printf "</svg>\n" >> outfile
   }'
