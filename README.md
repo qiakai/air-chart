@@ -2,8 +2,7 @@
 
 # Air-chart
 
-**Natural-language air quality queries → global monitoring-station matching → zero-dependency high-resolution SVG charts.**
-**Powered by the [OpenAQ](https://openaq.org) API v3 (reference-grade government monitoring data from 100+ countries).**
+**One sentence. Your AI draws you a professional air-quality chart.**
 
 English | [简体中文](README.zh.md)
 
@@ -16,11 +15,24 @@ English | [简体中文](README.zh.md)
 
 </div>
 
-`air-chart` is an agent skill that turns a plain-language request — "compare PM2.5
-in Tokyo vs Seoul over the past week" — into a rendered SVG chart. It resolves the
-city, picks the best *active* monitoring station, cleans the time series, and draws
-the chart. No Python, no Matplotlib, no Node runtime: just `bash`, `jq`, `awk` and
-`curl`, with a hand-rolled awk SVG renderer.
+## What does this skill do?
+
+Say one sentence in your AI chat — it **finds the station, fetches the data, and draws the chart** for you, returning a high-resolution SVG ready to paste into a report:
+
+> 💬 "Show me Beijing's PM2.5 trend over the past week"
+> 💬 "Compare Tokyo vs Seoul air quality for the last 7 days"
+> 💬 "Delhi PM10 over 30 days, against the WHO guideline"
+> 💬 "Hourly ozone in Singapore for the past 48 hours"
+> 💬 "Which monitoring station in Beijing is worst right now?"
+
+Behind the scenes, a fully automated pipeline: resolve the city → pick a **genuinely active** station from **OpenAQ** (reference-grade government monitoring data from 100+ countries) → clean outliers and gaps → render a professional chart.
+
+**Why you'll want it:**
+
+- **Trustworthy by design** — prefers government reference-grade stations; charts label physical concentration (µg/m³) and overlay the **WHO 24-hour guideline** (red when exceeded, green when compliant). Not a vanity AQI number — data you can put in a report.
+- **Zero setup burden** — no Python, no Matplotlib; runs on `bash`/`jq`/`awk` alone, ready in any agent sandbox or bare machine.
+- **Global coverage, forgiving input** — built-in coordinates for 200+ cities; fuzzy names (`delhi`, `tOKyo`) just work, and raw `lat,lon` is accepted too.
+- **Real-world data, not a toy** — drops silent "zombie" stations and sensor-fault spikes; missing hours break the line instead of being zero-filled.
 
 ## Showcase
 
