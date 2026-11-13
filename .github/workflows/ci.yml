@@ -27,6 +27,9 @@ jobs:
           ./scripts/air_chart.sh --city Delhi --param pm10 --snapshot --demo -o /tmp/snapshot.svg
           ./scripts/air_chart.sh --city Beijing --param pm25 --param pm10 --period 30d --demo --theme dark -o /tmp/dark.svg
 
+      - name: Boundary battery (30 cases)
+        run: bash tests/battery.sh | tail -3
+
       - name: Validate SVG output
         run: |
           for f in /tmp/beijing.svg /tmp/compare.svg /tmp/london.svg /tmp/snapshot.svg /tmp/dark.svg; do

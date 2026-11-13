@@ -125,6 +125,10 @@ render_draw.sh      纯 awk SVG 渲染（折线/柱状 + WHO 基准虚线 + 图�
 | 5 | 无活性站点或无有效数据 |
 | 2 | 城市名无法解析（附相近候选） |
 
+## 延伸阅读
+
+- [技术解析文章](docs/article-zh.md)：零依赖 CLI 数据管道 + Agent Skill 视觉交付的架构实践
+
 ## License
 
 MIT

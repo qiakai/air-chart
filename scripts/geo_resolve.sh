@@ -31,7 +31,8 @@ lookup_city() {
 }
 
 main() {
-  local input="${1:?usage: geo_resolve.sh <city name | lat,lon>}"
+  local input="${1:-}"
+  [[ -z "$input" ]] && { printf 'geo_resolve: 城市名不能为空。\n' >&2; exit 2; }
   # 直接坐标输入: "lat,lon"
   if [[ "$input" =~ ^[[:space:]]*-?[0-9]+(\.[0-9]+)?[[:space:]]*,[[:space:]]*-?[0-9]+(\.[0-9]+)?[[:space:]]*$ ]]; then
     local lat lon

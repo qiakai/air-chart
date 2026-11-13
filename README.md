@@ -136,6 +136,10 @@ units and the WHO line is suppressed to avoid dimensional confusion.
 | 5 | No active station or no valid data |
 | 2 | City name unresolvable (prints close candidates) |
 
+## Further reading
+
+- [技术解析文章（中文）](docs/article-zh.md)：零依赖 CLI 数据管道 + Agent Skill 视觉交付的架构实践
+
 ## License
 
 MIT
