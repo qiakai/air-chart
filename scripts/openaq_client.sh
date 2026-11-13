@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# openaq_client.sh — OpenAQ API v3 轻量封装
+# 职责: 鉴权、本地缓存(TTL)、429 限流退避、站点优选、时间序列拉取
+# 依赖: curl / jq / awk(即本仓库零重型依赖主张)
+set -euo pipefail
+
+OPENAQ_API_BASE="${OPENAQ_API_BASE:-https://api.openaq.org/v3}"
+AIR_CHART_CACHE_DIR="${AIR_CHART_CACHE_DIR:-$HOME/.cache/air-chart}"
+AIR_CHART_TIMEOUT="${AIR_CHART_TIMEOUT:-20}"
+AIR_CHART_MAX_RETRY="${AIR_CHART_MAX_RETRY:-4}"
+
+air_chart_err() { printf '[air-chart] ERROR: %s\n' "$*" >&2; }
+
+# ---------- 鉴权 ----------
+openaq_api_key() {
+  # 顺序: 环境变量 -> x keyring (service: openaq)
+  if [[ -n "${OPENAQ_API_KEY:-}" ]]; then
+    printf '%s' "$OPENAQ_API_KEY"; return 0
+  fi
+  if command -v x >/dev/null 2>&1; then
+    local k
+    k="$(x keyring get openaq 2>/dev/null || true)"
+    if [[ -n "$k" && "$k" != *"not found"* ]]; then
+      printf '%s' "$k"; return 0
+    fi
+  fi
+  return 1
+}
+
+openaq_require_key() {
+  if ! openaq_api_key >/dev/null; then
+    cat >&2 <<'EOF'
+[air-chart] ERROR: 未检测到 OpenAQ API Key。
+  1. 免费注册: https://explore.openaq.org/register
+  2. 任选其一配置:
+     export OPENAQ_API_KEY="你的key"
+     x keyring set openaq          # 存入系统加密钥匙串
+EOF
+    exit 3
+  fi
+}
+
+# ---------- 缓存 ----------
+_cache_key() { printf '%s' "$1" | md5sum | awk '{print $1}'; }
+
+_cache_get() { # _cache_get <key> <ttl_seconds>
+  local f="$AIR_CHART_CACHE_DIR/$1"
+  [[ -f "$f" ]] || return 1
+  local now mtime
+  now="$(date +%s)"
+  mtime="$(date -r "$f" +%s 2>/dev/null || stat -c %Y "$f")"
+  (( now - mtime <= $2 )) || return 1
+  cat "$f"
+}
+
+_cache_put() { # _cache_put <key> <content>
+  mkdir -p "$AIR_CHART_CACHE_DIR"
+  printf '%s' "$2" > "$AIR_CHART_CACHE_DIR/$1"
+}
+
+# ---------- 带限流退避的请求 ----------
+_openaq_get() { # _openaq_get <path-with-query> <ttl_seconds>
+  local path="$1" ttl="${2:-1200}"
+  local key; key="$(_cache_key "$path")"
+  local cached
+  if cached="$(_cache_get "$key" "$ttl")"; then
+    printf '%s' "$cached"; return 0
+  fi
+
+  local api_key; api_key="$(openaq_api_key)" || exit 3
+  local attempt=1 wait
+  local body http_code
+  while (( attempt <= AIR_CHART_MAX_RETRY )); do
+    body="$(curl -sS --max-time "$AIR_CHART_TIMEOUT" -w $'\n%{http_code}' \
+      -H "X-API-Key: $api_key" -H 'Accept: application/json' \
+      "${OPENAQ_API_BASE}${path}" 2>/dev/null)" || body=$'curl_failed\n000'
+    http_code="$(printf '%s' "$body" | tail -n1)"
+    body="$(printf '%s' "$body" | sed '$d')"
+
+    case "$http_code" in
+      200)
+        _cache_put "$key" "$body"
+        printf '%s' "$body"; return 0 ;;
+      429)
+        # 解析 Retry-After, 否则指数退避
+        wait=$(( attempt * 5 ))
+        sleep "$wait"
+        (( attempt++ )) ;;
+      401|403)
+        air_chart_err "API 鉴权失败 (HTTP $http_code), 请检查 OPENAQ_API_KEY 是否有效。"
+        exit 4 ;;
+      000)
+        air_chart_err "网络请求失败, 请检查网络连接。"
+        exit 4 ;;
+      *)
+        air_chart_err "OpenAQ API 异常 (HTTP $http_code): $(printf '%s' "$body" | head -c 200)"
+        exit 4 ;;
+    esac
+  done
+  air_chart_err "触发限流 (429), 已按 Retry-After 退避 $AIR_CHART_MAX_RETRY 次仍失败, 请稍后重试。"
+  exit 4
+}
+
+# ---------- 站点检索与优选 ----------
+openaq_find_locations() { # <lat> <lon> [radius_m] -> locations JSON
+  local lat="$1" lon="$2" radius="${3:-25000}"
+  _openaq_get "/locations?coordinates=${lat},${lon}&radius=${radius}&limit=100" 1800
+}
+
+# 从 locations JSON 中优选传感器; 输出: sensor_id \t units \t timezone \t location_name \t isMonitor
+openaq_pick_sensor() { # <locations_json> <param>
+  local json="$1" param="$2"
+  printf '%s' "$json" | jq -r --arg p "$param" '
+    [ .results[]? | . as $loc
+      | (.sensors // [])[] | select((.parameter.name // "" | ascii_downcase) == $p
+          or (.parameter.displayName // "" | ascii_downcase | gsub("[._]";"")) == ($p | gsub("[._]";"")))
+      | { sensor_id: .id, units: (.parameter.units // ""),
+          tz: ($loc.timezone // "UTC"), name: ($loc.name // $loc.locality // "unknown"),
+          monitor: ($loc.isMonitor // false), last: ($loc.datetimeLast.utc // "") } ]
+    | map(select(.last != ""))
+    | sort_by(.monitor | not)          # 参考级监测站优先
+    | .[0] // empty
+    | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv'
+}
+
+openaq_pick_all_sensors() { # <locations_json> <param> — 快照模式: 输出全部活性站点的 sensor 行
+  local json="$1" param="$2"
+  printf '%s' "$json" | jq -r --arg p "$param" '
+    [ .results[]? | . as $loc
+      | (.sensors // [])[] | select((.parameter.name // "" | ascii_downcase) == $p
+          or (.parameter.displayName // "" | ascii_downcase | gsub("[._]";"")) == ($p | gsub("[._]";"")))
+      | { sensor_id: .id, units: (.parameter.units // ""),
+          tz: ($loc.timezone // "UTC"), name: ($loc.name // $loc.locality // "unknown"),
+          monitor: ($loc.isMonitor // false), last: ($loc.datetimeLast.utc // "") } ]
+    | map(select(.last != ""))
+    | sort_by(.monitor | not)
+    | .[] | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv'
+}
+
+# ---------- 活性过滤 ----------
+openaq_filter_active() { # <locations_json> [max_age_hours] -> 过滤掉 datetimeLast 超龄站点的 JSON
+  local json="$1" max_age="${2:-24}"
+  local cutoff
+  cutoff="$(date -u -d "-${max_age} hours" +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -v-"${max_age}"H +%Y-%m-%dT%H:%M:%S)"
+  printf '%s' "$json" | jq --arg c "$cutoff" '
+    .results = [ (.results // [])[] | select((.datetimeLast.utc // "") >= $c) ] | .'
+}
+
+# ---------- 时间序列 ----------
+openaq_fetch_series() { # <sensor_id> <hours|days> <date_from> <date_to> -> TSV: utc \t local \t value
+  local sensor_id="$1" gran="$2" from="$3" to="$4"
+  local json
+  json="$(_openaq_get "/sensors/${sensor_id}/${gran}?date_from=${from}&date_to=${to}&limit=1000" \
+    "$( [[ "$gran" == hours ]] && echo 1200 || echo 7200 )")"
+  printf '%s' "$json" | jq -r '
+    (.results // [])
+    | map(select(.value != null))
+    | .[]
+    | [ .period.datetimeFrom.utc,
+        (.period.datetimeFrom.local // .period.datetimeFrom.utc),
+        .value ] | @tsv'
+}
+
+openaq_fetch_latest() { # <sensor_id> -> TSV: utc \t local \t value (最新一条)
+  local sensor_id="$1"
+  local json
+  json="$(_openaq_get "/sensors/${sensor_id}/hours?limit=1" 600)"
+  printf '%s' "$json" | jq -r '
+    (.results // []) | sort_by(.period.datetimeFrom.utc) | last // empty
+    | select(.value != null)
+    | [ .period.datetimeFrom.utc, (.period.datetimeFrom.local // .period.datetimeFrom.utc), .value ] | @tsv'
+}

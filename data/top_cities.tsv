@@ -1,0 +1,256 @@
+Beijing	CN	39.9042	116.4074	Asia/Shanghai
+Shanghai	CN	31.2304	121.4737	Asia/Shanghai
+Guangzhou	CN	23.1291	113.2644	Asia/Shanghai
+Shenzhen	CN	22.5431	114.0579	Asia/Shanghai
+Chengdu	CN	30.5728	104.0668	Asia/Shanghai
+Chongqing	CN	29.5630	106.5516	Asia/Shanghai
+Xian	CN	34.3416	108.9398	Asia/Shanghai
+Wuhan	CN	30.5928	114.3055	Asia/Shanghai
+Hangzhou	CN	30.2741	120.1551	Asia/Shanghai
+Nanjing	CN	32.0603	118.7969	Asia/Shanghai
+Tianjin	CN	39.0842	117.2009	Asia/Shanghai
+Shenyang	CN	41.8057	123.4315	Asia/Shanghai
+Harbin	CN	45.8038	126.5349	Asia/Shanghai
+Kunming	CN	25.0389	102.7183	Asia/Shanghai
+Changsha	CN	28.2282	112.9388	Asia/Shanghai
+Zhengzhou	CN	34.7466	113.6253	Asia/Shanghai
+Jinan	CN	36.6512	117.1201	Asia/Shanghai
+Qingdao	CN	36.0671	120.3826	Asia/Shanghai
+Dalian	CN	38.9140	121.6147	Asia/Shanghai
+Xiamen	CN	24.4798	118.0894	Asia/Shanghai
+Fuzhou	CN	26.0745	119.2965	Asia/Shanghai
+Guiyang	CN	26.6470	106.6302	Asia/Shanghai
+Nanning	CN	22.8170	108.3665	Asia/Shanghai
+Hohhot	CN	40.8424	111.7499	Asia/Shanghai
+Urumqi	CN	43.8256	87.6168	Asia/Urumqi
+Lhasa	CN	29.6520	91.1721	Asia/Shanghai
+Lanzhou	CN	36.0611	103.8343	Asia/Shanghai
+Xining	CN	36.6171	101.7782	Asia/Shanghai
+Yinchuan	CN	38.4872	106.2309	Asia/Shanghai
+Suzhou	CN	31.2989	120.5853	Asia/Shanghai
+Wuxi	CN	31.4912	120.3119	Asia/Shanghai
+Ningbo	CN	29.8683	121.5440	Asia/Shanghai
+Hefei	CN	31.8206	117.2272	Asia/Shanghai
+Nanchang	CN	28.6829	115.8582	Asia/Shanghai
+Taiyuan	CN	37.8706	112.5489	Asia/Shanghai
+Shijiazhuang	CN	38.0428	114.5149	Asia/Shanghai
+Guilin	CN	25.2736	110.2900	Asia/Shanghai
+Zhuhai	CN	22.2707	113.5767	Asia/Shanghai
+Hong Kong	HK	22.3193	114.1694	Asia/Hong_Kong
+Macau	MO	22.1987	113.5439	Asia/Macau
+Taipei	TW	25.0330	121.5654	Asia/Taipei
+Kaohsiung	TW	22.6273	120.3014	Asia/Taipei
+Tokyo	JP	35.6762	139.6503	Asia/Tokyo
+Osaka	JP	34.6937	135.5023	Asia/Tokyo
+Nagoya	JP	35.1815	136.9066	Asia/Tokyo
+Sapporo	JP	43.0618	141.3545	Asia/Tokyo
+Fukuoka	JP	33.5904	130.4017	Asia/Tokyo
+Seoul	KR	37.5665	126.9780	Asia/Seoul
+Busan	KR	35.1796	129.0756	Asia/Seoul
+Pyongyang	KP	39.0392	125.7625	Asia/Pyongyang
+Ulaanbaatar	MN	47.8864	106.9057	Asia/Ulaanbaatar
+Hanoi	VN	21.0278	105.8342	Asia/Ho_Chi_Minh
+Ho Chi Minh City	VN	10.8231	106.6297	Asia/Ho_Chi_Minh
+Bangkok	TH	13.7563	100.5018	Asia/Bangkok
+Phnom Penh	KH	11.5564	104.9282	Asia/Phnom_Penh
+Vientiane	LA	17.9757	102.6331	Asia/Vientiane
+Yangon	MM	16.8409	96.1735	Asia/Yangon
+Kuala Lumpur	MY	3.1390	101.6869	Asia/Kuala_Lumpur
+Singapore	SG	1.3521	103.8198	Asia/Singapore
+Jakarta	ID	-6.2088	106.8456	Asia/Jakarta
+Surabaya	ID	-7.2575	112.7521	Asia/Jakarta
+Bandung	ID	-6.9175	107.6191	Asia/Jakarta
+Manila	PH	14.5995	120.9842	Asia/Manila
+Dhaka	BD	23.8103	90.4125	Asia/Dhaka
+Kathmandu	NP	27.7172	85.3240	Asia/Kathmandu
+Thimphu	BT	27.4728	89.6390	Asia/Thimphu
+Colombo	LK	6.9271	79.8612	Asia/Colombo
+Male	MV	4.1755	73.5093	Indian/Maldives
+New Delhi	IN	28.6139	77.2090	Asia/Kolkata
+Mumbai	IN	19.0760	72.8777	Asia/Kolkata
+Kolkata	IN	22.5726	88.3639	Asia/Kolkata
+Chennai	IN	13.0827	80.2707	Asia/Kolkata
+Bengaluru	IN	12.9716	77.5946	Asia/Kolkata
+Hyderabad	IN	17.3850	78.4867	Asia/Kolkata
+Ahmedabad	IN	23.0225	72.5714	Asia/Kolkata
+Pune	IN	18.5204	73.8567	Asia/Kolkata
+Jaipur	IN	26.9124	75.7873	Asia/Kolkata
+Lucknow	IN	26.8467	80.9462	Asia/Kolkata
+Islamabad	PK	33.6844	73.0479	Asia/Karachi
+Karachi	PK	24.8607	67.0011	Asia/Karachi
+Lahore	PK	31.5204	74.3587	Asia/Karachi
+Kabul	AF	34.5553	69.2075	Asia/Kabul
+Tehran	IR	35.6892	51.3890	Asia/Tehran
+Baghdad	IQ	33.3152	44.3661	Asia/Baghdad
+Riyadh	SA	24.7136	46.6753	Asia/Riyadh
+Jeddah	SA	21.4858	39.1925	Asia/Riyadh
+Doha	QA	25.2854	51.5310	Asia/Qatar
+Dubai	AE	25.2048	55.2708	Asia/Dubai
+Abu Dhabi	AE	24.4539	54.3773	Asia/Dubai
+Muscat	OM	23.5880	58.3829	Asia/Muscat
+Kuwait City	KW	29.3759	47.9774	Asia/Kuwait
+Manama	BH	26.2285	50.5860	Asia/Bahrain
+Amman	JO	31.9454	35.9284	Asia/Amman
+Beirut	LB	33.8938	35.5018	Asia/Beirut
+Tel Aviv	IL	32.0853	34.7818	Asia/Jerusalem
+Istanbul	TR	41.0082	28.9784	Europe/Istanbul
+Ankara	TR	39.9334	32.8597	Europe/Istanbul
+Izmir	TR	38.4237	27.1428	Europe/Istanbul
+Baku	AZ	40.4093	49.8671	Asia/Baku
+Tbilisi	GE	41.7151	44.8271	Asia/Tbilisi
+Yerevan	AM	40.1792	44.4991	Asia/Yerevan
+Almaty	KZ	43.2220	76.8512	Asia/Almaty
+Astana	KZ	51.1694	71.4491	Asia/Almaty
+Tashkent	UZ	41.2995	69.2401	Asia/Tashkent
+Ashgabat	TM	37.9601	58.3261	Asia/Ashgabat
+Dushanbe	TJ	38.5598	68.7870	Asia/Dushanbe
+Bishkek	KG	42.8746	74.5698	Asia/Bishkek
+London	GB	51.5074	-0.1278	Europe/London
+Manchester	GB	53.4808	-2.2426	Europe/London
+Birmingham	GB	52.4862	-1.8904	Europe/London
+Paris	FR	48.8566	2.3522	Europe/Paris
+Lyon	FR	45.7640	4.8357	Europe/Paris
+Marseille	FR	43.2965	5.3698	Europe/Paris
+Berlin	DE	52.5200	13.4050	Europe/Berlin
+Hamburg	DE	53.5511	9.9937	Europe/Berlin
+Munich	DE	48.1351	11.5820	Europe/Berlin
+Frankfurt	DE	50.1109	8.6821	Europe/Berlin
+Madrid	ES	40.4168	-3.7038	Europe/Madrid
+Barcelona	ES	41.3874	2.1686	Europe/Madrid
+Valencia	ES	39.4699	-0.3763	Europe/Madrid
+Seville	ES	37.3891	-5.9845	Europe/Madrid
+Rome	IT	41.9028	12.4964	Europe/Rome
+Milan	IT	45.4642	9.1900	Europe/Rome
+Naples	IT	40.8518	14.2681	Europe/Rome
+Turin	IT	45.0703	7.6869	Europe/Rome
+Amsterdam	NL	52.3676	4.9041	Europe/Amsterdam
+Rotterdam	NL	51.9244	4.4777	Europe/Amsterdam
+Brussels	BE	50.8503	4.3517	Europe/Brussels
+Vienna	AT	48.2082	16.3738	Europe/Vienna
+Zurich	CH	47.3769	8.5417	Europe/Zurich
+Geneva	CH	46.2044	6.1432	Europe/Zurich
+Prague	CZ	50.0755	14.4378	Europe/Prague
+Budapest	HU	47.4979	19.0402	Europe/Budapest
+Warsaw	PL	52.2297	21.0122	Europe/Warsaw
+Krakow	PL	50.0647	19.9450	Europe/Warsaw
+Stockholm	SE	59.3293	18.0686	Europe/Stockholm
+Gothenburg	SE	57.7089	11.9746	Europe/Stockholm
+Oslo	NO	59.9139	10.7522	Europe/Oslo
+Copenhagen	DK	55.6761	12.5683	Europe/Copenhagen
+Helsinki	FI	60.1695	24.9354	Europe/Helsinki
+Dublin	IE	53.3498	-6.2603	Europe/Dublin
+Lisbon	PT	38.7223	-9.1393	Europe/Lisbon
+Porto	PT	41.1579	-8.6291	Europe/Lisbon
+Athens	GR	37.9838	23.7275	Europe/Athens
+Bucharest	RO	44.4268	26.1025	Europe/Bucharest
+Sofia	BG	42.6977	23.3219	Europe/Sofia
+Belgrade	RS	44.7866	20.4489	Europe/Belgrade
+Zagreb	HR	45.8150	15.9819	Europe/Zagreb
+Kyiv	UA	50.4501	30.5234	Europe/Kyiv
+Kharkiv	UA	49.9935	36.2304	Europe/Kyiv
+Minsk	BY	53.9006	27.5590	Europe/Minsk
+Moscow	RU	55.7558	37.6173	Europe/Moscow
+Saint Petersburg	RU	59.9311	30.3609	Europe/Moscow
+Vladivostok	RU	43.1155	131.8855	Europe/Moscow
+Reykjavik	IS	64.1466	-21.9426	Atlantic/Reykjavik
+New York	US	40.7128	-74.0060	America/New_York
+Los Angeles	US	34.0522	-118.2437	America/Los_Angeles
+Chicago	US	41.8781	-87.6298	America/Chicago
+Houston	US	29.7604	-95.3698	America/Chicago
+Phoenix	US	33.4484	-112.0740	America/Phoenix
+Philadelphia	US	39.9526	-75.1652	America/New_York
+San Antonio	US	29.4241	-98.4936	America/Chicago
+San Diego	US	32.7157	-117.1611	America/Los_Angeles
+Dallas	US	32.7767	-96.7970	America/Chicago
+San Jose	US	37.3382	-121.8863	America/Los_Angeles
+Austin	US	30.2672	-97.7431	America/Chicago
+San Francisco	US	37.7749	-122.4194	America/Los_Angeles
+Seattle	US	47.6062	-122.3321	America/Los_Angeles
+Denver	US	39.7392	-104.9903	America/Denver
+Boston	US	42.3601	-71.0589	America/New_York
+Washington	US	38.9072	-77.0369	America/New_York
+Miami	US	25.7617	-80.1918	America/New_York
+Atlanta	US	33.7490	-84.3880	America/New_York
+Detroit	US	42.3314	-83.0458	America/New_York
+Minneapolis	US	44.9778	-93.2650	America/Chicago
+Toronto	CA	43.6532	-79.3832	America/Toronto
+Montreal	CA	45.5017	-73.5673	America/Toronto
+Vancouver	CA	49.2827	-123.1207	America/Vancouver
+Calgary	CA	51.0447	-114.0719	America/Edmonton
+Ottawa	CA	45.4215	-75.6972	America/Toronto
+Mexico City	MX	19.4326	-99.1332	America/Mexico_City
+Guadalajara	MX	20.6597	-103.3496	America/Mexico_City
+Monterrey	MX	25.6866	-100.3161	America/Monterrey
+Havana	CU	23.1136	-82.3666	America/Havana
+Santo Domingo	DO	18.4861	-69.9312	America/Santo_Domingo
+San Juan	PR	18.4655	-66.1057	America/Puerto_Rico
+Guatemala City	GT	14.6349	-90.5069	America/Guatemala
+Panama City	PA	8.9824	-79.5199	America/Panama
+San Jose	CR	9.9281	-84.0907	America/Costa_Rica
+Bogota	CO	4.7110	-74.0721	America/Bogota
+Medellin	CO	6.2442	-75.5812	America/Bogota
+Lima	PE	-12.0464	-77.0428	America/Lima
+Quito	EC	-0.1807	-78.4678	America/Guayaquil
+Guayaquil	EC	-2.1894	-79.8891	America/Guayaquil
+Santiago	CL	-33.4489	-70.6693	America/Santiago
+Buenos Aires	AR	-34.6037	-58.3816	America/Argentina/Buenos_Aires
+Montevideo	UY	-34.9011	-56.1645	America/Montevideo
+Asuncion	PY	-25.2637	-57.5759	America/Asuncion
+La Paz	BO	-16.4897	-68.1193	America/La_Paz
+Santa Cruz	BO	-17.7833	-63.1821	America/La_Paz
+Sao Paulo	BR	-23.5505	-46.6333	America/Sao_Paulo
+Rio de Janeiro	BR	-22.9068	-43.1729	America/Sao_Paulo
+Brasilia	BR	-15.7939	-47.8828	America/Sao_Paulo
+Salvador	BR	-12.9777	-38.5016	America/Sao_Paulo
+Belo Horizonte	BR	-19.9167	-43.9345	America/Sao_Paulo
+Curitiba	BR	-25.4284	-49.2733	America/Sao_Paulo
+Manaus	BR	-3.1190	-60.0217	America/Manaus
+Recife	BR	-8.0476	-34.8770	America/Sao_Paulo
+Caracas	VE	10.4806	-66.9036	America/Caracas
+Cairo	EG	30.0444	31.2357	Africa/Cairo
+Alexandria	EG	31.2001	29.9187	Africa/Cairo
+Lagos	NG	6.5244	3.3792	Africa/Lagos
+Abuja	NG	9.0579	7.4951	Africa/Lagos
+Accra	GH	5.6037	-0.1870	Africa/Accra
+Abidjan	CI	5.3600	-4.0083	Africa/Abidjan
+Dakar	SN	14.7167	-17.4677	Africa/Dakar
+Addis Ababa	ET	9.0300	38.7400	Africa/Addis_Ababa
+Nairobi	KE	-1.2921	36.8219	Africa/Nairobi
+Kampala	UG	0.3476	32.5825	Africa/Kampala
+Dar es Salaam	TZ	-6.7924	39.2083	Africa/Dar_es_Salaam
+Kigali	RW	-1.9441	30.0619	Africa/Kigali
+Kinshasa	CD	-4.4419	15.2663	Africa/Kinshasa
+Luanda	AO	-8.8390	13.2894	Africa/Luanda
+Lusaka	ZM	-15.3875	28.3228	Africa/Lusaka
+Harare	ZW	-17.8252	31.0335	Africa/Harare
+Maputo	MZ	-25.9692	32.5732	Africa/Maputo
+Johannesburg	ZA	-26.2041	28.0473	Africa/Johannesburg
+Cape Town	ZA	-33.9249	18.4241	Africa/Johannesburg
+Durban	ZA	-29.8587	31.0218	Africa/Johannesburg
+Pretoria	ZA	-25.7479	28.2293	Africa/Johannesburg
+Windhoek	NA	-22.5609	17.0658	Africa/Windhoek
+Antananarivo	MG	-18.8792	47.5079	Indian/Antananarivo
+Port Louis	MU	-20.1609	57.5012	Indian/Mauritius
+Algiers	DZ	36.7538	3.0588	Africa/Algiers
+Tunis	TN	36.8065	10.1815	Africa/Tunis
+Rabat	MA	34.0209	-6.8416	Africa/Casablanca
+Casablanca	MA	33.5731	-7.5898	Africa/Casablanca
+Marrakesh	MA	31.6295	-7.9811	Africa/Casablanca
+Tripoli	LY	32.8872	13.1913	Africa/Tripoli
+Khartoum	SD	15.5007	32.5599	Africa/Khartoum
+Juba	SS	4.8594	31.5713	Africa/Juba
+Mogadishu	SO	2.0469	45.3182	Africa/Mogadishu
+Asmara	ER	15.3229	38.9251	Africa/Asmara
+Sydney	AU	-33.8688	151.2093	Australia/Sydney
+Melbourne	AU	-37.8136	144.9631	Australia/Melbourne
+Brisbane	AU	-27.4698	153.0251	Australia/Brisbane
+Perth	AU	-31.9505	115.8605	Australia/Perth
+Adelaide	AU	-34.9285	138.6007	Australia/Adelaide
+Canberra	AU	-35.2809	149.1300	Australia/Sydney
+Auckland	NZ	-36.8485	174.7633	Pacific/Auckland
+Wellington	NZ	-41.2865	174.7762	Pacific/Auckland
+Christchurch	NZ	-43.5321	172.6362	Pacific/Auckland
+Honolulu	US	21.3069	-157.8583	Pacific/Honolulu
+Port Moresby	PG	-9.4438	147.1803	Pacific/Port_Moresby
+Suva	FJ	-18.1416	178.4419	Pacific/Fiji
+Papeete	PF	-17.5516	-149.5585	Pacific/Tahiti
