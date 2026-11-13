@@ -17,16 +17,16 @@ normalize() {
 lookup_city() {
   local q; q="$(normalize "$1")"
   local hit
-  # 精确匹配（规范名）
+  # 精确匹配（规范名 或 中文名）
   hit="$(awk -F'\t' -v q="$q" '
     { n=$1; gsub(/^[ \t]+|[ \t]+$/,"",n); l=tolower(n); gsub(/ /,"_",l); gsub(/-/,"_",l);
-      if (l == q || tolower(n) == q) { print; exit } }
+      if (l == q || tolower(n) == q || $6 == q) { print; exit } }
   ' "$CITIES_TSV")"
   [[ -n "$hit" ]] && { printf '%s\n' "$hit"; return 0; }
-  # 包含匹配（如 "delhi" -> "New Delhi"）
+  # 包含匹配（如 "delhi" -> "New Delhi", "中山" -> "中山市"）
   awk -F'\t' -v q="$q" '
     { n=$1; l=tolower(n); gsub(/ /,"_",l); gsub(/-/,"_",l);
-      if (index(l, q) > 0 || index(tolower(n), q) > 0) { print; exit } }
+      if (index(l, q) > 0 || index(tolower(n), q) > 0 || index($6, q) > 0) { print; exit } }
   ' "$CITIES_TSV"
 }
 
