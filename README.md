@@ -37,19 +37,26 @@ Behind the scenes, a fully automated pipeline: resolve the city → pick a **gen
 
 ## Showcase
 
-All charts below are real `x-cmd.com/draw` renders — each image *is* a data-carrying URL.
+Every chart below is a **real OpenAQ measurement** rendered live from its data-carrying URL — no image files are stored in this repo. Click any chart to open it in the x-cmd Draw editor and tweak the values.
 
-| Multi-city comparison (7-day PM2.5) | Single-city 48h ozone |
+| Multi-city PM2.5, last 7 days (Tokyo · Seoul · London) | New Delhi PM2.5 / PM10, last 14 days |
 | --- | --- |
-| ![beijing vs tokyo](examples/beijing_vs_tokyo.svg) | ![london o3](examples/london_48h_o3.svg) |
+| ![Multi-city PM2.5 comparison][sc1] | ![New Delhi multi-parameter][sc3] |
 
-| Multi-station snapshot | Multi-parameter (dark theme) |
+| London ozone (O3), last 48 hours | New Delhi PM10 snapshot by station (live) |
 | --- | --- |
-| ![delhi snapshot](examples/delhi_snapshot.svg) | ![beijing dark](examples/beijing_pm25_pm10_dark.svg) |
+| ![London O3 48h][sc2] | ![New Delhi station snapshot][sc4] |
 
-| Live sample — Hong Kong PM2.5, real OpenAQ data | |
+| Dark theme: multi-city PM2.5 | New Delhi PM2.5, last 30 days |
 | --- | --- |
-| ![hongkong live](examples/hongkong_pm25_7d_live.svg) | |
+| ![Dark multi-city][sc5] | ![New Delhi 30d][sc6] |
+
+[sc1]: https://x-cmd.com/draw?type=line&title=PM2.5%20comparison%20%C2%B7%20last%207d%20%C2%B7%20multi-city%20%C2%B7%20same%20parameter&unit=%C2%B5g%2Fm%C2%B3&labels=11-06,11-07,11-08,11-09,11-10,11-11,11-12,11-13&series=Tokyo%20PM2.5:5.14,2.73,2.95,5,5.5,6.45,10.4,12.7&series=Seoul%20PM2.5:9.46,7.96,9.58,10.3,16.2,22.8,28.8,28.3&series=London%20PM2.5:37.3,58.3,82.4,49.4,23.9,15.8,10.8,13.7&series=WHO%2024h:15,15,15,15,15,15,15,15&w=960&h=500&t=opendata
+[sc2]: https://x-cmd.com/draw?type=line&title=London%20O3%20trend%20%C2%B7%20last%2048h%20%C2%B7%20local%20time%20%28Europe%2FLondon%29&unit=%C2%B5g%2Fm%C2%B3&labels=11-11%2021%3A00,11-11%2022%3A00,11-12%2000%3A00,11-12%2001%3A00,11-12%2002%3A00,11-12%2003%3A00,11-12%2004%3A00,11-12%2005%3A00,11-12%2006%3A00,11-13%2000%3A00,11-13%2001%3A00,11-13%2002%3A00,11-13%2003%3A00,11-13%2004%3A00,11-13%2005%3A00,11-13%2006%3A00,11-13%2007%3A00&series=London%20O3:48.8,44.6,51.1,52.7,51.2,42.7,43.1,41,31.4,42.7,44.9,46.5,48.3,39.6,17.1,15.4,17&series=WHO%2024h:100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100&w=960&h=500&t=opendata
+[sc3]: https://x-cmd.com/draw?type=line&title=New%20Delhi%20PM2.5%20%2F%20PM10%20trend%20%C2%B7%20last%2014d%20%C2%B7%20multi-parameter&unit=%C2%B5g%2Fm%C2%B3&labels=10-30,10-31,11-01,11-02,11-03,11-04,11-05,11-06,11-07,11-08,11-09,11-10,11-11,11-12,11-13&series=New%20Delhi%20PM2.5:44.7,110,205,217,241,265,305,306,339,302,222,163,147,232,172&series=New%20Delhi%20PM10:56.7,156,283,320,345,396,427,409,438,328,162,198,196,286,222&series=WHO%2024h:15,15,15,15,15,15,15,15,15,15,15,15,15,15,15&w=960&h=500&t=opendata
+[sc4]: https://x-cmd.com/draw?type=hbar&title=New%20Delhi%20PM10%20snapshot%20by%20station%20%C2%B7%202026-11-14%2009%3A19%20IST%20%C2%B7%2025km%20radius&unit=%C2%B5g%2Fm%C2%B3&labels=Alipur,Anand%20Vihar,Ashok%20Vihar,Aya%20Nagar,Bawana,Burari%20Crossing&values=372.0,320.0,335.0,367.0,367.0,472.0&num=all&w=960&h=480&t=evil-glow
+[sc5]: https://x-cmd.com/draw?type=line&title=PM2.5%20comparison%20%C2%B7%20last%207d%20%C2%B7%20multi-city%20%C2%B7%20same%20parameter&unit=%C2%B5g%2Fm%C2%B3&labels=11-06,11-07,11-08,11-09,11-10,11-11,11-12,11-13&series=Tokyo%20PM2.5:5.14,2.73,2.95,5,5.5,6.45,10.4,12.7&series=Seoul%20PM2.5:9.46,7.96,9.58,10.3,16.2,22.8,28.8,28.3&series=London%20PM2.5:37.3,58.3,82.4,49.4,23.9,15.8,10.8,13.7&series=WHO%2024h:15,15,15,15,15,15,15,15&w=960&h=500&scheme=dark&t=opendata
+[sc6]: https://x-cmd.com/draw?type=line&title=New%20Delhi%20PM2.5%20trend%20%C2%B7%20last%2030d%20%C2%B7%20local%20time%20%28Asia%2FKolkata%29&unit=%C2%B5g%2Fm%C2%B3&labels=10-14,10-15,10-16,10-17,10-18,10-19,10-20,10-21,10-22,10-23,10-27,10-28,10-29,10-30,10-31,11-01,11-02,11-03,11-04,11-05,11-06,11-07,11-08,11-09,11-10,11-11,11-12,11-13&series=New%20Delhi%20PM2.5:104,73.6,65.7,94,127,94,125,142,136,142,138,131,95,44.7,110,205,217,241,265,305,306,339,302,222,163,147,232,172&series=WHO%2024h:15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15&w=960&h=500&t=opendata
 
 ## Features
 

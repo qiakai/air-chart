@@ -36,6 +36,7 @@ scripts/air_chart.sh --city <city> [--city <city2> ...] [--param <pollutant>] [-
 | `--period, -t` | Time range, default `7d`. `24h/48h` aggregate hourly; `7d/14d/30d` daily | `24h` `48h` `7d` `14d` `30d` |
 | `--snapshot` | Snapshot mode: horizontal bar chart of current values across the city's active stations (top 6) | flag |
 | `--theme` | Color theme | `light` (default) / `dark` |
+| `--style` | x-cmd Draw palette | `opendata` (default), `evil`, `evil-glow`, `shadcn`, ... |
 | `--lang` | Output language | `en` / `zh` (default: auto-detect from system locale) |
 | `--out, -o` | Download chart as `.svg` or `.png` | default: print the x-cmd Draw URL only |
 | `--demo` | Demo mode with built-in sample data; no API key needed | flag |

@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/openaq_client.sh"
 
 # ---------- 参数默认值 ----------
-CITIES=(); PARAMS=("pm25"); PERIOD="7d"; SNAPSHOT=0; THEME="light"; OUT=""; DEMO=0
+CITIES=(); PARAMS=("pm25"); PERIOD="7d"; SNAPSHOT=0; THEME="light"; STYLE="opendata"; OUT=""; DEMO=0
 LANG_OPT=""
 
 usage() { sed -n '2,15p' "${BASH_SOURCE[0]}"; }
@@ -30,6 +30,7 @@ while (( $# )); do
     -t|--period) PERIOD="$2"; shift 2 ;;
     --snapshot) SNAPSHOT=1; shift ;;
     --theme) THEME="$2"; shift 2 ;;
+    --style) STYLE="$2"; shift 2 ;;
     --lang) LANG_OPT="$2"; shift 2 ;;
     -o|--out) OUT="$2"; shift 2 ;;
     --demo) DEMO=1; shift ;;
@@ -254,7 +255,8 @@ fetch_city_snapshot() { # <city> <param> -> 渲染柱状图所需 items
     [[ -z "$latest" ]] && continue
     v="$(cut -f3 <<<"$latest")"; utc_ts="$(cut -f1 <<<"$latest")"
     [[ -z "$units" ]] && units="$u"
-    items+=("${s_name}:${v}")
+    s_short="${s_name%%,*}"   # 站名含逗号会破坏 hbar 解析, 取逗号前短名
+    items+=("${s_short}:${v}")
     CITY_NOTES+=("  - ${s_name}$( [[ "$monitor" == "true" ]] && echo " $(t ref_grade)") · $(t latest): ${v} ${u} @ ${utc_ts} UTC")
   done <<<"$sensors"
   [[ ${#items[@]} -eq 0 ]] && { printf '[air-chart] %s\n' "$(t warn_no_latest)" >&2; return 1; }
@@ -265,7 +267,7 @@ fetch_city_snapshot() { # <city> <param> -> 渲染柱状图所需 items
     --subtitle "$(printf "$(t sub_snapshot)" "$(TZ="$tz" date '+%Y-%m-%d %H:%M %Z')")" \
     --unit "$units" \
     --items "${items[@]}" \
-    --theme "$THEME" ${OUT:+--out "$OUT"})"
+    --theme "$THEME" --style "$STYLE" ${OUT:+--out "$OUT"})"
   SNAPSHOT_URL="$url"
 }
 
@@ -291,7 +293,7 @@ if (( SNAPSHOT )); then
       --title "$(printf "$(t title_snapshot)" "$demo_city" "${PARAM_LABEL[$snap_param]}")$(t demo_tag)" \
       --subtitle "$(t sub_snapshot_demo)" \
       --unit "$snap_units" --items "${items[@]}" \
-      --theme "$THEME" ${OUT:+--out "$OUT"})"
+      --theme "$THEME" --style "$STYLE" ${OUT:+--out "$OUT"})"
   else
     fetch_city_snapshot "${CITIES[0]}" "${PARAMS[0]}"
   fi
@@ -366,7 +368,7 @@ fi
     --title "$title" --subtitle "$subtitle" --unit "$FIRST_UNITS" \
     --series "${RENDER_SPECS[@]}" \
     ${who_args[@]+"${who_args[@]}"} \
-    --theme "$THEME" ${OUT:+--out "$OUT"})"
+    --theme "$THEME" --style "$STYLE" ${OUT:+--out "$OUT"})"
 
   printf '\n[air-chart] %s\n%s\n' "$(t chart_saved)" "$url" >&2
   if (( ${#CITY_NOTES[@]} )); then

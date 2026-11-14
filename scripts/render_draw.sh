@@ -11,7 +11,7 @@
 #       [--theme light|dark] [--out out.svg|out.png]
 set -euo pipefail
 MODE=""; TITLE=""; SUBTITLE=""; UNIT=""; WHO=""; WHO_LABEL="WHO 24h"
-THEME="light"; OUT=""
+THEME="light"; STYLE="opendata"; OUT=""
 declare -a SPECS=()
 
 while (( $# )); do
@@ -24,6 +24,7 @@ while (( $# )); do
     --who) WHO="$2"; shift 2 ;;
     --who-label) WHO_LABEL="$2"; shift 2 ;;
     --theme) THEME="$2"; shift 2 ;;
+    --style) STYLE="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     *) printf 'render_draw: unknown option %s\n' "$1" >&2; exit 1 ;;
   esac
@@ -42,6 +43,9 @@ title_enc="$(enc "${SUBTITLE:+${TITLE} · ${SUBTITLE}}")"
 [[ -z "$title_enc" ]] && title_enc="$(enc "$TITLE")"
 unit_enc="$(enc "$UNIT")"
 scheme=""; [[ "$THEME" == "dark" ]] && scheme="&scheme=dark"
+# opendata 主题在 hbar 模式下会丢标题(x-cmd Draw 布局问题), 柱状图默认改用 evil-glow
+bar_style="$STYLE"; [[ "$MODE" == "bar" && "$bar_style" == "opendata" ]] && bar_style="evil-glow"
+style_enc=""; [[ -n "$bar_style" && "$bar_style" != "shadcn" ]] && style_enc="&t=$(enc "$bar_style")"
 
 if [[ "$MODE" == "line" ]]; then
   # 读取各序列, 对齐到序列 1 的时间槽; 任意序列缺失的槽位整槽丢弃 (严禁零填充)
@@ -85,7 +89,7 @@ if [[ "$MODE" == "line" ]]; then
     for _ in "${keep[@]}"; do who_csv+="${who_csv:+,}$WHO"; done
     query+="&series=$(enc "$WHO_LABEL"):$who_csv"
   fi
-  query+="&w=960&h=500${scheme}"
+  query+="&w=960&h=500${scheme}${style_enc}"
 else
   names_csv=""; vals_csv=""
   for s in "${SPECS[@]}"; do
@@ -94,7 +98,7 @@ else
   done
   query="$DRAW_BASE?type=hbar&title=$title_enc"
   [[ -n "$unit_enc" ]] && query+="&unit=$unit_enc"
-  query+="&labels=$names_csv&values=$vals_csv&num=all&w=960&h=$((120 + 60 * ${#SPECS[@]}))${scheme}"
+  query+="&labels=$names_csv&values=$vals_csv&num=all&w=960&h=$((120 + 60 * ${#SPECS[@]}))${scheme}${style_enc}"
 fi
 
 printf '%s\n' "$query"

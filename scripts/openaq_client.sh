@@ -177,14 +177,15 @@ openaq_pick_sensor() { # <locations_json> <param>
     | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv"
 }
 
-openaq_pick_all_sensors() { # <locations_json> <param> — 快照模式: 输出全部活性站点的 sensor 行
+openaq_pick_all_sensors() { # <locations_json> <param> — 快照模式: 输出全部活性站点的 sensor 行 (按站点去重, 参考级+最新优先)
   local json="$1" param="$2" pid
   pid="$(param_field "$param" 2)"
   printf '%s' "$json" | jq -r --arg p "$param" --arg pid "${pid:-0}" "
     [ .results[]? | $_sensor_jq_filter ]
     | map(select(.last != \"\"))
     | sort_by(.monitor | not)
-    | .[] | [.sensor_id, .units, .tz, .name, (.monitor|tostring)] | @tsv"
+    | .[] | [.sensor_id, .units, .tz, .name, (.monitor|tostring), .last] | @tsv" \
+  | sort -t$'\t' -k4,4 -k6,6r | awk -F'\t' '!seen[$4]++'
 }
 
 # ---------- 活性过滤 ----------
@@ -199,8 +200,14 @@ openaq_filter_active() { # <locations_json> [max_age_hours] -> 过滤掉 datetim
 # ---------- 时间序列 ----------
 openaq_fetch_series() { # <sensor_id> <hours|days> <date_from> <date_to> -> TSV: utc \t local \t value
   local sensor_id="$1" gran="$2" from="$3" to="$4"
-  local json
-  json="$(_openaq_get "/sensors/${sensor_id}/${gran}?date_from=${from}&date_to=${to}&limit=1000" \
+  local json range
+  # 端点参数不对称: /hours 需要 datetime_from/to, /days 用 date_from/to
+  if [[ "$gran" == hours ]]; then
+    range="datetime_from=${from}&datetime_to=${to}"
+  else
+    range="date_from=${from}&date_to=${to}"
+  fi
+  json="$(_openaq_get "/sensors/${sensor_id}/${gran}?${range}&limit=1000" \
     "$( [[ "$gran" == hours ]] && echo 1200 || echo 7200 )")"
   printf '%s' "$json" | jq -r '
     (.results // [])
@@ -211,10 +218,12 @@ openaq_fetch_series() { # <sensor_id> <hours|days> <date_from> <date_to> -> TSV:
         .value ] | @tsv'
 }
 
-openaq_fetch_latest() { # <sensor_id> -> TSV: utc \t local \t value (最新一条)
+openaq_fetch_latest() { # <sensor_id> -> TSV: utc \t local \t value (最新一条, 近 48h 内)
   local sensor_id="$1"
+  local from
+  from="$(date -u -d "-48 hours" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-48H +%Y-%m-%dT%H:%M:%SZ)"
   local json
-  json="$(_openaq_get "/sensors/${sensor_id}/hours?limit=1" 600)"
+  json="$(_openaq_get "/sensors/${sensor_id}/hours?datetime_from=${from}&limit=100" 600)"
   printf '%s' "$json" | jq -r '
     (.results // []) | sort_by(.period.datetimeFrom.utc) | last // empty
     | select(.value != null)
