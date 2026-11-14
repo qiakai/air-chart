@@ -8,8 +8,8 @@ description: Query global air-quality data (OpenAQ monitoring network) and rende
 ## What it does
 
 End-to-end pipeline from a natural-language query to a chart (rendered by x-cmd Draw, URL-as-Data):
-city resolution → OpenAQ station selection → data cleaning → vector chart rendering.
-Zero heavy dependencies: only `bash`, `jq`, `awk`, `curl` (the renderer is pure awk — no Python/Node required).
+city resolution → OpenAQ station selection → data cleaning → a `x-cmd.com/draw` URL that both renders the chart and carries the data. The local side stays pure `bash`/`jq`/`awk`/`curl` — no renderer to install or maintain; the URL is shareable, embeddable, and editable (change a value, the chart updates).
+Zero heavy dependencies; no Python/Node required.
 
 ## When to use
 

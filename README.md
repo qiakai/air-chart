@@ -29,13 +29,15 @@ Behind the scenes, a fully automated pipeline: resolve the city → pick a **gen
 
 **Why you'll want it:**
 
-- **URL as data** — by default you get a `x-cmd.com/draw` link: the chart *and* its data live in the URL. Share it, embed it in Markdown as an image, or tweak a value and the chart updates. Need a file? `--out chart.svg` (or `.png`) downloads it.
-- **Trustworthy by design** — prefers government reference-grade stations; charts label physical concentration (µg/m³) and overlay the **WHO 24-hour guideline** as a reference series (green/red by x-cmd Draw theming). Not a vanity AQI number — data you can put in a report.
-- **Zero setup burden** — no Python, no Matplotlib; runs on `bash`/`jq`/`awk`/`curl` alone, ready in any agent sandbox or bare machine.
+- **The chart is a URL — the URL is the data** — by default you get a `x-cmd.com/draw` link that both renders the chart and carries every value in it. Share it, drop it into Markdown as an image, or edit a number in the URL and the chart updates. Need a file? `--out chart.svg` (or `.png`) downloads it.
+- **Rendering by x-cmd Draw** — your local pipeline stays pure `bash`/`jq`/`awk`/`curl`; the chart engine is [x-cmd Draw](https://x-cmd.com/draw), so you inherit 11 chart types, light/dark themes, an online editor and zero renderer code to maintain. Nothing to install, nothing to keep up to date.
+- **Trustworthy by design** — prefers government reference-grade stations; charts label physical concentration (µg/m³) and overlay the **WHO 24-hour guideline** as a reference series, so the limit travels with the data instead of being an afterthought. Not a vanity AQI number — data you can put in a report.
 - **Global coverage, forgiving input** — built-in coordinates for 250+ cities; fuzzy names (`delhi`, `tOKyo`, `中山`) just work, and raw `lat,lon` is accepted too.
 - **Real-world data, not a toy** — drops silent "zombie" stations and sensor-fault spikes; missing hours are dropped from the axis, never zero-filled.
 
 ## Showcase
+
+All charts below are real `x-cmd.com/draw` renders — each image *is* a data-carrying URL.
 
 | Multi-city comparison (7-day PM2.5) | Single-city 48h ozone |
 | --- | --- |
@@ -44,6 +46,10 @@ Behind the scenes, a fully automated pipeline: resolve the city → pick a **gen
 | Multi-station snapshot | Multi-parameter (dark theme) |
 | --- | --- |
 | ![delhi snapshot](examples/delhi_snapshot.svg) | ![beijing dark](examples/beijing_pm25_pm10_dark.svg) |
+
+| Live sample — Hong Kong PM2.5, real OpenAQ data | |
+| --- | --- |
+| ![hongkong live](examples/hongkong_pm25_7d_live.svg) | |
 
 ## Features
 

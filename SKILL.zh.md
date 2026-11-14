@@ -7,7 +7,7 @@ description: 查询全球城市空气质量（OpenAQ 监测数据）并生成高
 
 ## 能力概述
 
-从自然语言查询到图表的端到端闭环：城市解析 → OpenAQ 站点优选 → 数据清洗 → 拼接 x-cmd Draw URL（默认输出链接，可下载 SVG/PNG）。
+从自然语言查询到图表的端到端闭环（x-cmd Draw 渲染，URL 即数据）：城市解析 → OpenAQ 站点优选 → 数据清洗 → 拼接 `x-cmd.com/draw` URL（默认输出链接，可下载 SVG/PNG）。链接可直接分享、内嵌 Markdown、随手改值即改图；本地仅需 `bash`/`jq`/`awk`/`curl`，渲染零安装零维护。
 零重型依赖：仅需 `bash`、`jq`、`awk`、`curl`（渲染器为纯 awk 实现，不依赖 Python/Node）。
 
 ## 触发场景
