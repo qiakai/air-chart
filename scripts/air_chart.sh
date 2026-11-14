@@ -8,7 +8,8 @@
 #   air_chart.sh --city Beijing --param pm25 --param pm10 --period 48h  # multi-parameter
 #   air_chart.sh --city Delhi --param pm10 --snapshot                   # station snapshot
 #   air_chart.sh --city Beijing --param pm25 --period 7d --demo         # demo data (no API key)
-# Options: --city/-c --param/-p --period/-t --snapshot --theme --lang en|zh --out/-o --demo
+# Options: --city/-c --param/-p --period/-t --snapshot --theme --lang en|zh --demo
+# Output: 默认打印 x-cmd Draw 图表 URL; --out/-o file.svg|file.png 下载落盘
 # Language: auto-detected from system locale (zh -> Chinese), override with --lang.
 set -euo pipefail
 
@@ -77,36 +78,36 @@ T_EN[ref_grade]="(reference-grade)"
 T_ZH[ref_grade]="(参考级)"
 T_EN[summary]="Data summary:"
 T_ZH[summary]="数据摘要:"
-T_EN[chart_saved]="Chart saved:"
-T_ZH[chart_saved]="图表已生成:"
-T_EN[snapshot_saved]="Snapshot saved:"
-T_ZH[snapshot_saved]="快照已生成:"
+T_EN[chart_saved]="Chart URL (data-in-URL, rendered by x-cmd Draw):"
+T_ZH[chart_saved]="图表链接 (URL 即数据, 由 x-cmd Draw 渲染):"
+T_EN[snapshot_saved]="Snapshot URL (rendered by x-cmd Draw):"
+T_ZH[snapshot_saved]="快照链接 (由 x-cmd Draw 渲染):"
 T_EN[station]="Station"
 T_ZH[station]="站点"
 T_EN[latest]="latest"
 T_ZH[latest]="最新"
 T_EN[title_compare]="%s comparison · last %s"
 T_ZH[title_compare]="%s 走势对比 · 最近 %s"
-T_EN[sub_compare]="Source: OpenAQ · multi-city same-parameter · station local time"
-T_ZH[sub_compare]="数据来源 OpenAQ · 多城市同指标对比 · 站点当地时间"
+T_EN[sub_compare]="multi-city · same parameter"
+T_ZH[sub_compare]="多城市同指标对比"
 T_EN[title_single]="%s %s trend · last %s"
 T_ZH[title_single]="%s %s 趋势 · 最近 %s"
-T_EN[sub_multi_param]="Source: OpenAQ · multi-parameter single city · station local time"
-T_ZH[sub_multi_param]="数据来源 OpenAQ · 单城市多指标对比 · 站点当地时间"
-T_EN[sub_single]="Source: OpenAQ · station local time (%s)"
-T_ZH[sub_single]="数据来源 OpenAQ · 站点当地时间 (%s)"
+T_EN[sub_multi_param]="multi-parameter"
+T_ZH[sub_multi_param]="单城市多指标对比"
+T_EN[sub_single]="local time (%s)"
+T_ZH[sub_single]="站点当地时间 (%s)"
 T_EN[ylabel_multi]="Concentration (%s)"
 T_ZH[ylabel_multi]="浓度 (%s)"
-T_EN[title_snapshot]="%s %s real-time snapshot by station"
-T_ZH[title_snapshot]="%s 各监测点 %s 实时快照"
-T_EN[sub_snapshot]="Source: OpenAQ · %s · active stations within 25km"
-T_ZH[sub_snapshot]="数据来源 OpenAQ · %s · 25km 半径内活性站点"
+T_EN[title_snapshot]="%s %s snapshot by station"
+T_ZH[title_snapshot]="%s 各站点 %s 实时快照"
+T_EN[sub_snapshot]="%s · 25km radius"
+T_ZH[sub_snapshot]="%s · 25km 半径"
 T_EN[demo_tag]=" (demo)"
 T_ZH[demo_tag]=" (演示)"
 T_EN[demo_mode_tag]=" · demo mode"
 T_ZH[demo_mode_tag]=" · 演示模式"
-T_EN[sub_snapshot_demo]="Source: OpenAQ · demo mode · active stations within 25km"
-T_ZH[sub_snapshot_demo]="数据来源 OpenAQ · 演示模式 · 25km 半径内活性站点"
+T_EN[sub_snapshot_demo]="demo · 25km radius"
+T_ZH[sub_snapshot_demo]="演示 · 25km 半径"
 
 t() { # t <key> — 取当前语言文案
   if [[ "$AIR_CHART_LANG" == "zh" ]]; then printf '%s' "${T_ZH[$1]:-${T_EN[$1]}}"; else printf '%s' "${T_EN[$1]}"; fi
@@ -141,8 +142,7 @@ case "$PERIOD" in
   *) printf '[air-chart] ERROR: '"$(t err_bad_period)"'\n' "$PERIOD" >&2; exit 1 ;;
 esac
 
-[[ -z "$OUT" ]] && OUT="./air-chart-$(date +%Y%m%d-%H%M%S).svg"
-
+# 默认输出 x-cmd Draw URL (--out 指定 .svg/.png 时才下载落盘)
 DATE_FROM="$(date -u -d "-$((HOURS + 6)) hours" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-"$((HOURS + 6))"H +%Y-%m-%dT%H:%M:%SZ)"
 DATE_TO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -260,25 +260,13 @@ fetch_city_snapshot() { # <city> <param> -> 渲染柱状图所需 items
   [[ ${#items[@]} -eq 0 ]] && { printf '[air-chart] %s\n' "$(t warn_no_latest)" >&2; return 1; }
   [[ -z "$units" || "$units" == "null" ]] && units="${PARAM_UNITS[$param]}"
   FIRST_UNITS="$units"
-  local who="${WHO_BASELINE[$param]}"
-  # WHO 线仅在与字典默认单位一致时叠加, 防止量纲误导; 达标绿/超标红
-  local who_args=()
-  if [[ "$units" == "${PARAM_UNITS[$param]}" ]]; then
-    local snap_max whoc
-    snap_max="$(printf '%s\n' "${items[@]#*:}" | sort -g | tail -1)"
-    whoc="#EF4444"
-    [[ "$(awk -v a="${snap_max:-0}" -v b="$who" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && whoc="#10B981"
-    who_args=(--who "$who" --who-label "WHO 24h: $who ${PARAM_UNITS[$param]}" --who-color "$whoc")
-  fi
-  local snap_color="${PARAM_COLOR[$param]}"; [[ "$THEME" == "dark" ]] && snap_color="${PARAM_COLOR_DARK[$param]}"
-  "$SCRIPT_DIR/render_draw.sh" bar \
+  url="$("$SCRIPT_DIR/render_draw.sh" bar \
     --title "$(printf "$(t title_snapshot)" "$geo_name" "${PARAM_LABEL[$param]}")" \
     --subtitle "$(printf "$(t sub_snapshot)" "$(TZ="$tz" date '+%Y-%m-%d %H:%M %Z')")" \
-    --ylabel "$units" \
-    --items "${items[@]}" --colors "$snap_color" \
-    ${who_args[@]+"${who_args[@]}"} \
-    --theme "$THEME" --width 960 --height $((120 + 60 * ${#items[@]})) \
-    --out "$OUT"
+    --unit "$units" \
+    --items "${items[@]}" \
+    --theme "$THEME" ${OUT:+--out "$OUT"})"
+  SNAPSHOT_URL="$url"
 }
 
 # ---------- 执行 ----------
@@ -288,9 +276,7 @@ fi
 
 if (( SNAPSHOT )); then
   snap_param="${PARAMS[0]}"
-  snap_color="${PARAM_COLOR[$snap_param]}"; [[ "$THEME" == "dark" ]] && snap_color="${PARAM_COLOR_DARK[$snap_param]}"
   snap_units="${PARAM_UNITS[$snap_param]}"
-  snap_who="${WHO_BASELINE[$snap_param]}"
   if (( DEMO )); then
     # 演示快照
     demo_city="${CITIES[0]}"
@@ -301,18 +287,19 @@ if (( SNAPSHOT )); then
     fi
     FIRST_UNITS="µg/m³"
     CITY_NOTES=("  - $(t demo_note)")
-    snap_max=63.5
-    [[ "$(awk -v a="$snap_max" -v b="$snap_who" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && snap_whoc="#10B981" || snap_whoc="#EF4444"
-    "$SCRIPT_DIR/render_draw.sh" bar \
+    SNAPSHOT_URL="$("$SCRIPT_DIR/render_draw.sh" bar \
       --title "$(printf "$(t title_snapshot)" "$demo_city" "${PARAM_LABEL[$snap_param]}")$(t demo_tag)" \
       --subtitle "$(t sub_snapshot_demo)" \
-      --ylabel "$snap_units" --items "${items[@]}" --colors "$snap_color" \
-      --who "$snap_who" --who-label "WHO 24h: $snap_who $snap_units" --who-color "$snap_whoc" --theme "$THEME" \
-      --width 960 --height 480 --out "$OUT"
+      --unit "$snap_units" --items "${items[@]}" \
+      --theme "$THEME" ${OUT:+--out "$OUT"})"
   else
     fetch_city_snapshot "${CITIES[0]}" "${PARAMS[0]}"
   fi
-  printf '\n[air-chart] %s %s\n%s\n' "$(t snapshot_saved)" "$OUT" "${CITY_NOTES[*]}"
+  printf '\n[air-chart] %s\n%s\n' "$(t snapshot_saved)" "$SNAPSHOT_URL" >&2
+  if (( ${#CITY_NOTES[@]} )); then
+    printf '[air-chart] %s\n%s\n' "$(t summary)" "${CITY_NOTES[*]}" >&2
+  fi
+  [[ -n "$OUT" ]] && printf '%s\n' "$OUT" || printf '%s\n' "$SNAPSHOT_URL"
   exit 0
 fi
 
@@ -361,42 +348,28 @@ else
   fi
 fi
 
-# WHO 基准线: 仅当所有序列单位与字典默认单位一致时叠加 (防止 ppm vs µg/m³ 量纲误导)
-who_args=()
-if [[ -n "${WHO_BASELINE[$param0]:-}" ]]; then
-  units_match=1
-  for i in "${!SERIES_PARAMS[@]}"; do
-    [[ "${SERIES_UNITS[$i]}" == "${PARAM_UNITS[${SERIES_PARAMS[$i]}]}" ]] || units_match=0
-  done
-  if (( units_match )); then
-    whoc="#EF4444"
-    [[ -n "$GLOBAL_MAX" && "$(awk -v a="$GLOBAL_MAX" -v b="${WHO_BASELINE[$param0]}" 'BEGIN{print (b>a)?1:0}')" == "1" ]] && whoc="#10B981"
-    who_args=(--who "${WHO_BASELINE[$param0]}" --who-label "WHO 24h: ${WHO_BASELINE[$param0]} ${PARAM_UNITS[$param0]}" --who-color "$whoc")
-  else
-    printf '[air-chart] NOTE: %s\n' "$(t note_who_skipped)" >&2
+  # WHO 基准线: 以常量序列注入 URL (x-cmd draw 渲染); 仅当单位与字典默认一致
+  who_args=()
+  if [[ -n "${WHO_BASELINE[$param0]:-}" ]]; then
+    units_match=1
+    for i in "${!SERIES_PARAMS[@]}"; do
+      [[ "${SERIES_UNITS[$i]}" == "${PARAM_UNITS[${SERIES_PARAMS[$i]}]}" ]] || units_match=0
+    done
+    if (( units_match )); then
+      who_args=(--who "${WHO_BASELINE[$param0]}" --who-label "WHO 24h")
+    else
+      printf '[air-chart] NOTE: %s\n' "$(t note_who_skipped)" >&2
+    fi
   fi
-fi
 
-# 序列配色: 单城用指标专属色板 (对齐 openaq-explorer), 多城用城市对比色板 (默认)
-colors_opt=()
-if (( city_count == 1 )); then
-  colors_csv=""
-  for p in "${SERIES_PARAMS[@]}"; do
-    c="${PARAM_COLOR[$p]}"; [[ "$THEME" == "dark" ]] && c="${PARAM_COLOR_DARK[$p]}"
-    colors_csv+="${colors_csv:+,}$c"
-  done
-  colors_opt=(--colors "$colors_csv")
-fi
+  url="$("$SCRIPT_DIR/render_draw.sh" line \
+    --title "$title" --subtitle "$subtitle" --unit "$FIRST_UNITS" \
+    --series "${RENDER_SPECS[@]}" \
+    ${who_args[@]+"${who_args[@]}"} \
+    --theme "$THEME" ${OUT:+--out "$OUT"})"
 
-"$SCRIPT_DIR/render_draw.sh" line \
-  --title "$title" --subtitle "$subtitle" \
-  --ylabel "$ylabel" \
-  --series "${RENDER_SPECS[@]}" \
-  ${colors_opt[@]+"${colors_opt[@]}"} \
-  ${who_args[@]+"${who_args[@]}"} \
-  --theme "$THEME" --out "$OUT"
-
-printf '\n[air-chart] %s %s\n' "$(t chart_saved)" "$OUT"
-if (( ${#CITY_NOTES[@]} )); then
-  printf '[air-chart] %s\n%s\n' "$(t summary)" "${CITY_NOTES[*]}"
-fi
+  printf '\n[air-chart] %s\n%s\n' "$(t chart_saved)" "$url" >&2
+  if (( ${#CITY_NOTES[@]} )); then
+    printf '[air-chart] %s\n%s\n' "$(t summary)" "${CITY_NOTES[*]}" >&2
+  fi
+  [[ -n "$OUT" ]] && printf '%s\n' "$OUT" || printf '%s\n' "$url"

@@ -17,7 +17,7 @@ English | [简体中文](README.zh.md)
 
 ## What does this skill do?
 
-Say one sentence in your AI chat — it **finds the station, fetches the data, and draws the chart** for you, returning a high-resolution SVG ready to paste into a report:
+Say one sentence in your AI chat — it **finds the station, fetches the data, and hands back a chart link** for you, powered by [x-cmd Draw](https://x-cmd.com/draw) — data and chart in one URL:
 
 > 💬 "Show me Beijing's PM2.5 trend over the past week"
 > 💬 "Compare Tokyo vs Seoul air quality for the last 7 days"
@@ -29,10 +29,11 @@ Behind the scenes, a fully automated pipeline: resolve the city → pick a **gen
 
 **Why you'll want it:**
 
-- **Trustworthy by design** — prefers government reference-grade stations; charts label physical concentration (µg/m³) and overlay the **WHO 24-hour guideline** (red when exceeded, green when compliant). Not a vanity AQI number — data you can put in a report.
-- **Zero setup burden** — no Python, no Matplotlib; runs on `bash`/`jq`/`awk` alone, ready in any agent sandbox or bare machine.
-- **Global coverage, forgiving input** — built-in coordinates for 200+ cities; fuzzy names (`delhi`, `tOKyo`) just work, and raw `lat,lon` is accepted too.
-- **Real-world data, not a toy** — drops silent "zombie" stations and sensor-fault spikes; missing hours break the line instead of being zero-filled.
+- **URL as data** — by default you get a `x-cmd.com/draw` link: the chart *and* its data live in the URL. Share it, embed it in Markdown as an image, or tweak a value and the chart updates. Need a file? `--out chart.svg` (or `.png`) downloads it.
+- **Trustworthy by design** — prefers government reference-grade stations; charts label physical concentration (µg/m³) and overlay the **WHO 24-hour guideline** as a reference series (green/red by x-cmd Draw theming). Not a vanity AQI number — data you can put in a report.
+- **Zero setup burden** — no Python, no Matplotlib; runs on `bash`/`jq`/`awk`/`curl` alone, ready in any agent sandbox or bare machine.
+- **Global coverage, forgiving input** — built-in coordinates for 250+ cities; fuzzy names (`delhi`, `tOKyo`, `中山`) just work, and raw `lat,lon` is accepted too.
+- **Real-world data, not a toy** — drops silent "zombie" stations and sensor-fault spikes; missing hours are dropped from the axis, never zero-filled.
 
 ## Showcase
 
@@ -111,7 +112,7 @@ Then just ask your agent: *"Compare PM2.5 in Tokyo and Seoul over the past 7 day
 | `--snapshot` | Multi-station real-time snapshot bar chart | flag |
 | `--theme` | Color theme | `light` / `dark` |
 | `--lang` | Output language (charts + messages) | `en` / `zh` (default: auto-detect from system locale) |
-| `--out, -o` | Output SVG path | default `./air-chart-<timestamp>.svg` |
+| `--out, -o` | Download chart as `.svg` or `.png` | default: print the x-cmd Draw URL only |
 | `--demo` | Demo mode, no API key needed | flag |
 
 ## Architecture
@@ -132,7 +133,7 @@ data_transform.awk  cleaning (negatives / physically impossible spikes),
                     gap detection (breaks, never zero-filled), stats, local-time labels
    │
    ▼
-render_draw.sh      pure-awk SVG renderer (lines / bars + WHO guideline + legend)
+render_draw.sh      x-cmd Draw URL builder (URL-as-Data; optional .svg/.png download)
 ```
 
 `data/parameters.tsv` is a static parameter dictionary aligned with the openaq-api

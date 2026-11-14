@@ -17,7 +17,7 @@
 
 ## 这个 Skill 能干嘛？
 
-你在 AI 对话里随口一句话，它就能**自动找站点、拉数据、画图表**，几秒钟交回一张可以直接贴进报告的高清 SVG 图：
+你在 AI 对话里随口一句话，它就能**自动找站点、拉数据、出图表**，几秒给你一个由 x-cmd Draw 渲染的图表链接——数据和图都在 URL 里，直接贴进 Markdown 或报告：
 
 > 💬 "看看北京最近一周 PM2.5 走势"
 > 💬 "对比东京和首尔过去 7 天的空气质量"
@@ -46,7 +46,7 @@
 
 ## 特性
 
-- **零重型依赖**：仅需 `bash` / `jq` / `awk` / `curl`，渲染器为纯 awk 实现的 SVG 生成器——不需要 Python、Matplotlib 或 Node.js。
+- **零重型依赖**：仅需 `bash` / `jq` / `awk` / `curl`——数据管道自研，渲染交给 x-cmd Draw，不需要 Python、Matplotlib 或 Node.js。
 - **全球覆盖**：内置 200+ 全球主要城市坐标库，也支持直接传入 `lat,lon`。
 - **智能站点优选**：25km 半径检索 → 剔除 24h（必要时 72h）未更新的僵尸站点 → 优先选择政府参考级监测站（Reference-grade）。
 - **专业视觉**：醒目标注物理浓度单位（µg/m³），默认叠加 WHO 空气质量指南 24 小时基准虚线（PM2.5=15 / PM10=45 / O3=100 / NO2=25 / SO2=40 / CO=4），浅/深双主题。
@@ -113,7 +113,7 @@ git clone https://github.com/qiakai/air-chart.git ~/.claude/skills/air-chart
 | `--snapshot` | 同城多站点实时快照柱状图 | 开关 |
 | `--theme` | 主题 | `light` / `dark` |
 | `--lang` | 输出语言（图表 + 提示文案） | `en` / `zh`（默认按系统 locale 自动检测） |
-| `--out, -o` | 输出 SVG 路径 | 默认 `./air-chart-<时间戳>.svg` |
+| `--out, -o` | 下载图表为 `.svg` 或 `.png` | 默认仅输出 x-cmd Draw 链接 |
 | `--demo` | 演示模式（免 API Key） | 开关 |
 
 ## 架构
@@ -134,7 +134,7 @@ data_transform.awk  清洗(负值/超物理上限尖峰)、断点检测(缺失�
                     断开, 严禁填 0)、统计聚合、当地时区标签
    │
    ▼
-render_draw.sh      纯 awk SVG 渲染（折线/柱状 + WHO 基准虚线 + 图例）
+render_draw.sh      x-cmd Draw URL 拼接器 (URL 即数据; 可下载 .svg/.png)
 ```
 
 `data/parameters.tsv` 为静态参数字典（对齐 openaq-api 污染物固定 ID）：slug / param_id / 名称 / 单位 / WHO 24h 基准 / 物理上限 / 指标专属色，消除冗余 `/parameters` 探测。视觉规范对齐 openaq-explorer：指标专属色板（PM2.5 `#E65100`、PM10 `#6A1B9A`、O3 `#0277BD`、NO2 `#00838F`）、多城色盲友好色板、WHO 基准线达标绿 `#10B981` / 超标红 `#EF4444`；站点单位与默认单位不一致时自动隐藏 WHO 线以防量纲误导。

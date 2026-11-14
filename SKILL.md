@@ -1,13 +1,13 @@
 ---
 name: air-chart
-description: Query global air-quality data (OpenAQ monitoring network) and render high-resolution SVG trend charts. Use when the user asks to "check/compare air quality in a city, PM2.5/PM10/ozone trends, or generate an air-quality chart". Supports single-city trends, multi-city comparison (up to 4 cities), multi-parameter charts, and multi-station snapshots; automatically prefers active government reference-grade stations, overlays WHO guideline lines, and aligns timestamps to station local time.
+description: Query global air-quality data (OpenAQ monitoring network) and render high-resolution trend charts via x-cmd Draw (URL-as-Data). Use when the user asks to "check/compare air quality in a city, PM2.5/PM10/ozone trends, or generate an air-quality chart". Supports single-city trends, multi-city comparison (up to 4 cities), multi-parameter charts, and multi-station snapshots; automatically prefers active government reference-grade stations, overlays WHO guideline lines, and aligns timestamps to station local time.
 ---
 
 # air-chart — Air Quality Chart Generation Skill
 
 ## What it does
 
-End-to-end pipeline from a natural-language query to an SVG chart:
+End-to-end pipeline from a natural-language query to a chart (rendered by x-cmd Draw, URL-as-Data):
 city resolution → OpenAQ station selection → data cleaning → vector chart rendering.
 Zero heavy dependencies: only `bash`, `jq`, `awk`, `curl` (the renderer is pure awk — no Python/Node required).
 
@@ -37,7 +37,7 @@ scripts/air_chart.sh --city <city> [--city <city2> ...] [--param <pollutant>] [-
 | `--snapshot` | Snapshot mode: horizontal bar chart of current values across the city's active stations (top 6) | flag |
 | `--theme` | Color theme | `light` (default) / `dark` |
 | `--lang` | Output language | `en` / `zh` (default: auto-detect from system locale) |
-| `--out, -o` | Output SVG path | default `./air-chart-<timestamp>.svg` |
+| `--out, -o` | Download chart as `.svg` or `.png` | default: print the x-cmd Draw URL only |
 | `--demo` | Demo mode with built-in sample data; no API key needed | flag |
 
 ### Mode auto-selection
@@ -65,7 +65,7 @@ Without a key the script exits with code 3 and prints this guidance — never an
 The script prints `[air-chart] Chart saved: <path>` plus a data summary (station name,
 reference-grade flag, n/min/max/avg, units). The agent should:
 
-1. Show the user the SVG path (it can be inlined in Markdown).
+1. Show the user the x-cmd Draw chart URL by default (embeddable as an image in Markdown); if --out was given, also give the local file path.
 2. Present the summary as text, noting the units are **physical concentration** (e.g. µg/m³), not AQI.
 3. Charts overlay the WHO 24-hour guideline by default (see `data/parameters.tsv`: PM2.5=15, PM10=45, O3=100, NO2=25, SO2=40 µg/m³, CO=4 mg/m³) — green when compliant, red when exceeded. If a station reports non-default units (e.g. ppm), the line is auto-suppressed to avoid dimensional confusion.
 
@@ -88,7 +88,7 @@ reference-grade flag, n/min/max/avg, units). The agent should:
 - `scripts/openaq_client.sh`: API v3 wrapper (X-API-Key auth, User-Agent, md5 cache, 429 exponential backoff, liveness filter, sensor match by fixed parameter ID, reference-grade first).
 - `data/parameters.tsv`: static parameter dictionary (slug / fixed ID / name / unit / WHO 24h guideline / physical cap / per-parameter color) — no redundant `/parameters` round-trips.
 - `scripts/data_transform.awk`: negative/extreme-spike filtering, gap detection (breaks the line, never zero-fills), min/max/avg stats.
-- `scripts/render_draw.sh`: pure-awk SVG renderer (lines/bars, WHO guideline, legend, light/dark themes).
+- `scripts/render_draw.sh`: x-cmd Draw URL builder (URL-as-Data: type=line/hbar + labels + series; WHO guideline injected as a constant series; optional .svg/.png export).
 
 ## Visual spec (aligned with openaq-explorer)
 
