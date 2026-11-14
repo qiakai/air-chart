@@ -155,10 +155,6 @@ render_draw.sh      x-cmd Draw URL 拼接器 (URL 即数据; 可下载 .svg/.png
 | 5 | 无活性站点或无有效数据 |
 | 2 | 城市名无法解析（附相近候选） |
 
-## 延伸阅读
-
-- [技术解析文章](docs/article-zh.md)：零依赖 CLI 数据管道 + Agent Skill 视觉交付的架构实践
-
 ## License
 
 MIT
