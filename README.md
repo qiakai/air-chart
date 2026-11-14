@@ -30,7 +30,7 @@ Behind the scenes, a fully automated pipeline: resolve the city → pick a **gen
 **Why you'll want it:**
 
 - **The chart is a URL — the URL is the data** — by default you get a `x-cmd.com/draw` link that both renders the chart and carries every value in it. Share it, drop it into Markdown as an image, or edit a number in the URL and the chart updates. Need a file? `--out chart.svg` (or `.png`) downloads it.
-- **Rendering by x-cmd Draw** — your local pipeline stays pure `bash`/`jq`/`awk`/`curl`; the chart engine is [x-cmd Draw](https://x-cmd.com/draw), so you inherit 11 chart types, light/dark themes, an online editor and zero renderer code to maintain. Nothing to install, nothing to keep up to date.
+- **Rendering by x-cmd Draw** — your local pipeline stays pure `bash`/`jq`/`awk`/`curl`; the chart engine is [x-cmd Draw](https://x-cmd.com/draw), so you inherit a growing library of chart types (line, bar, area, pie, radar, gauge, sankey, Gantt, mind maps and more), light/dark themes, multi-language rendering, an online editor and zero renderer code to maintain. Nothing to install, nothing to keep up to date.
 - **Trustworthy by design** — prefers government reference-grade stations; charts label physical concentration (µg/m³) and overlay the **WHO 24-hour guideline** as a reference series, so the limit travels with the data instead of being an afterthought. Not a vanity AQI number — data you can put in a report.
 - **Global coverage, forgiving input** — built-in coordinates for 250+ cities; fuzzy names (`delhi`, `tOKyo`, `中山`) just work, and raw `lat,lon` is accepted too.
 - **Real-world data, not a toy** — drops silent "zombie" stations and sensor-fault spikes; missing hours are dropped from the axis, never zero-filled.
