@@ -4,7 +4,7 @@
 
 **One sentence. Your AI draws you a professional air-quality chart.**
 
-English | [简体中文](README.zh.md)
+English | [简体中文](README.zh.md) | [Español](README.es.md) | [हिन्दी](README.hi.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md)
 
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-native-blue)
 ![Cursor](https://img.shields.io/badge/Cursor-native-blue)
@@ -124,7 +124,7 @@ Then just ask your agent: *"Compare PM2.5 in Tokyo and Seoul over the past 7 day
 | `--period, -t` | Time range (default `7d`) | `24h` `48h` (hourly) · `7d` `14d` `30d` (daily) |
 | `--snapshot` | Multi-station real-time snapshot bar chart | flag |
 | `--theme` | Color theme | `light` / `dark` |
-| `--lang` | Output language (charts + messages) | `en` / `zh` (default: auto-detect from system locale) |
+| `--lang` | Output language (charts + messages) | `en` `zh` `es` `hi` `ja` `ko` `fr` (default: auto-detect from system locale) |
 | `--out, -o` | Download chart as `.svg` or `.png` | default: print the x-cmd Draw URL only |
 | `--demo` | Demo mode, no API key needed | flag |
 

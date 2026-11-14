@@ -4,7 +4,7 @@
 
 **一句话，让 AI 给你画出全球空气质量专业图表。**
 
-[English](README.md) | 简体中文
+[English](README.md) | 简体中文 | [Español](README.es.md) | [हिन्दी](README.hi.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Français](README.fr.md)
 
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-native-blue)
 ![Cursor](https://img.shields.io/badge/Cursor-native-blue)
@@ -126,7 +126,7 @@ git clone https://github.com/qiakai/air-chart.git ~/.claude/skills/air-chart
 | `--period, -t` | 时间跨度（默认 `7d`） | `24h` `48h`（小时级）· `7d` `14d` `30d`（日级） |
 | `--snapshot` | 同城多站点实时快照柱状图 | 开关 |
 | `--theme` | 主题 | `light` / `dark` |
-| `--lang` | 输出语言（图表 + 提示文案） | `en` / `zh`（默认按系统 locale 自动检测） |
+| `--lang` | 输出语言（图表 + 提示文案） | `en` `zh` `es` `hi` `ja` `ko` `fr`（默认按系统 locale 自动检测） |
 | `--out, -o` | 下载图表为 `.svg` 或 `.png` | 默认仅输出 x-cmd Draw 链接 |
 | `--demo` | 演示模式（免 API Key） | 开关 |
 

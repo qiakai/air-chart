@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# air-chart 边界测试用例批量验证 (30 组)
+# air-chart 边界测试用例批量验证 (37 组)
 cd "$(dirname "$0")/.." || exit 1
 pass=0; fail=0
 t() { # t <描述> <期望退出码> <命令...>
@@ -39,4 +39,11 @@ t "快照模式"              0 ./scripts/air_chart.sh -c Delhi -p pm10 --snapsh
 t "深色主题"              0 ./scripts/air_chart.sh -c Beijing $D --theme dark -o /tmp/t28.svg
 t "无 Key 真实调用"       3 env -u OPENAQ_API_KEY ./scripts/air_chart.sh -c Beijing -o /tmp/t29.svg
 t "未指定城市"            1 ./scripts/air_chart.sh $D -o /tmp/t30.svg
+t "lang=es"               0 ./scripts/air_chart.sh -c Beijing $D --lang es -o /tmp/t31.svg
+t "lang=hi"               0 ./scripts/air_chart.sh -c Beijing $D --lang hi -o /tmp/t32.svg
+t "lang=ja"               0 ./scripts/air_chart.sh -c Beijing $D --lang ja -o /tmp/t33.svg
+t "lang=ko"               0 ./scripts/air_chart.sh -c Delhi $D --lang ko --snapshot -o /tmp/t34.svg
+t "lang=fr"               0 ./scripts/air_chart.sh -c Beijing $D --lang fr -o /tmp/t35.svg
+t "lang 回退(非法值)"      0 ./scripts/air_chart.sh -c Beijing $D --lang xx -o /tmp/t36.svg
+t "locale 自动检测 ja"     0 env LANG=ja_JP.UTF-8 ./scripts/air_chart.sh -c Tokyo $D -o /tmp/t37.svg
 echo "== pass=$pass fail=$fail =="
